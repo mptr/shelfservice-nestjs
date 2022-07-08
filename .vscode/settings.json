@@ -10,5 +10,6 @@
 		"**/dist": true,
 		"**/node_modules": true
 	},
-	"npm.packageManager": "pnpm"
+	"npm.packageManager": "pnpm",
+	"material-icon-theme.activeIconPack": "nest"
 }
