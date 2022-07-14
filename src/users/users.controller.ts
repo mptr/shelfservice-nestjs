@@ -1,15 +1,25 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './entities/user.entity';
+import { Controller, Get, Post, Param, Delete, Sse } from '@nestjs/common';
+import { User } from './user.entity';
 import { Requester } from 'src/util/requester.decorator';
+import { ApiTags } from '@nestjs/swagger';
+import { Public } from 'nest-keycloak-connect';
+import { Observable } from 'rxjs';
 
 @Controller('users')
+@ApiTags('users')
+@Public()
 export class UsersController {
+	@Sse('time')
+	time() {
+		return new Observable(subscriber => {
+			const i = setInterval(() => subscriber.next(new Date().toString()), 1000);
+			return () => clearInterval(i);
+		});
+	}
+
 	@Post()
-	create(@Body() createUserDto: CreateUserDto, @Requester() requester: User) {
-		const u = new User(requester);
-		return u.save();
+	create(@Requester() requester: User) {
+		return requester.save();
 	}
 
 	@Get()
@@ -20,13 +30,6 @@ export class UsersController {
 	@Get(':id')
 	findOne(@Param('id') id: string) {
 		return User.findOne({ where: { id } });
-	}
-
-	@Patch(':id')
-	async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-		const u = await this.findOne(id);
-		//
-		return u.save();
 	}
 
 	@Delete(':id')

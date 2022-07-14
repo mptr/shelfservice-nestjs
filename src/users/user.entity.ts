@@ -1,4 +1,5 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { WorkflowRun } from 'src/workflows/workflow-runs/workflow-run.entity';
+import { BaseEntity, Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class User extends BaseEntity {
@@ -13,6 +14,9 @@ export class User extends BaseEntity {
 
 	@Column()
 	lastName: string;
+
+	@OneToMany(() => WorkflowRun, wfrun => wfrun.ranBy)
+	workflowRuns: WorkflowRun[];
 
 	constructor(p?: Omit<User, 'id'>) {
 		super();

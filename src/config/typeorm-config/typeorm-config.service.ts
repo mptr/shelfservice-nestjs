@@ -15,6 +15,7 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
 			password: DB_PASSWORD,
 			database: DB_NAME,
 			synchronize: true,
+			dropSchema: false,
 		};
 	}
 }

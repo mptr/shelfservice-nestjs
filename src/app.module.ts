@@ -30,6 +30,7 @@ import { APP_GUARD, APP_PIPE } from '@nestjs/core';
 			useValue: new ValidationPipe({
 				whitelist: true,
 				enableDebugMessages: true,
+				transform: true,
 			}),
 		},
 		// { provide: APP_FILTER, useClass: TypeormNotFoundExceptionFilter },

@@ -1,27 +1,25 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import {
-	KubernetesWorkflowDefinition,
-	WebWorkerWorkflowDefinition,
-	WorkflowDefinition,
-} from './entities/workflow-definition.entity';
-import { CreateAnyWorkflowDefinitionDto } from './dto/create-workflow-definition.dto';
-import { UpdateAnyWorkflowDefinitionDto } from './dto/update-workflow-definition.dto';
+import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
+import { KubernetesWorkflowDefinition, WorkflowDefinition } from './workflow-definition.entity';
+import { ApiTags } from '@nestjs/swagger';
+
+import { Public } from 'nest-keycloak-connect';
 
 @Controller('workflows')
+@ApiTags('workflows')
+@Public()
 export class WorkflowsController {
-	@Post()
-	create(@Body() createWorkflowDto: CreateAnyWorkflowDefinitionDto) {
-		switch (createWorkflowDto.kind) {
-			case 'kubernetes':
-				return new KubernetesWorkflowDefinition(createWorkflowDto).save();
-			case 'web-worker':
-				return new WebWorkerWorkflowDefinition(createWorkflowDto).save();
-		}
+	@Post('kubernetes')
+	createKubernetes(@Body() wfDef: KubernetesWorkflowDefinition) {
+		return wfDef.save();
 	}
+	// @Post('webworker')
+	// createWebworker(@Body() wfDef: WebWorkerWorkflowDefinition) {
+	// 	return wfDef.save();
+	// }
 
 	@Get()
 	findAll() {
-		return WorkflowDefinition.find();
+		return WorkflowDefinition.find({ select: ['id', 'name'] });
 	}
 
 	@Get(':id')
@@ -29,15 +27,15 @@ export class WorkflowsController {
 		return WorkflowDefinition.findOne({ where: { id } });
 	}
 
-	@Patch(':id')
-	async update(@Param('id') id: string, @Body() updateWorkflowDto: UpdateAnyWorkflowDefinitionDto) {
-		const wf = await WorkflowDefinition.findOne({ where: { id } });
-		//
-		return wf.save();
-	}
+	// @Patch(':id')
+	// async update(@Param('id') id: string, @Body() updateWorkflowDto: UpdateAnyWorkflowDefinitionDto) {
+	// 	const wf = await WorkflowDefinition.findOne({ where: { id } });
+	// 	//
+	// 	return wf.save();
+	// }
 
 	@Delete(':id')
-	remove(@Param('id') id: string) {
-		return WorkflowDefinition.delete({ id });
+	async remove(@Param('id') id: string) {
+		return WorkflowDefinition.softRemove(await this.findOne(id));
 	}
 }

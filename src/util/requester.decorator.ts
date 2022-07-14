@@ -8,7 +8,8 @@ import {
 	PipeTransform,
 	Type,
 } from '@nestjs/common';
-import { User } from 'src/users/entities/user.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from 'src/users/user.entity';
 import { Repository } from 'typeorm';
 
 export interface JWToken {
@@ -27,10 +28,13 @@ interface ArgMetadata<T> extends ArgumentMetadata {
  * Pipe to obtain User entity from authenticated user through jwt
  */
 @Injectable()
-export class JwtUserPipe<T extends User> implements PipeTransform<JWToken, Promise<User>> {
-	constructor(protected userRepo: Repository<T>) {}
+export class JwtUserPipe implements PipeTransform<JWToken, Promise<User>> {
+	constructor(
+		@InjectRepository(User)
+		protected userRepo: Repository<User>,
+	) {}
 
-	async transform(jwt: any, metadata: ArgMetadata<T>): Promise<User> {
+	async transform(jwt: any, metadata: ArgMetadata<User>): Promise<User> {
 		/* istanbul ignore next */ // this should never happen (only on bad decorator usage)
 		if (!metadata.metatype) throw new Error('No metatype supplied');
 		const u = await this.userRepo.findOne({
