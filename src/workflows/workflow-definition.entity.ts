@@ -3,6 +3,7 @@ import {
 	ChildEntity,
 	Column,
 	CreateDateColumn,
+	DeleteDateColumn,
 	Entity,
 	OneToMany,
 	PrimaryGeneratedColumn,
@@ -17,7 +18,6 @@ import { IsArray, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { JsonColumn } from 'src/util/json-column.decorator';
 import { HttpException } from '@nestjs/common';
-import { v4 } from 'uuid';
 
 @Entity()
 @TableInheritance({ column: { type: 'varchar', name: 'kind' } })
@@ -28,7 +28,7 @@ export class WorkflowDefinition extends BaseEntity {
 	@Column()
 	readonly kind: string;
 
-	@Column({ unique: true })
+	@Column()
 	@IsString()
 	name: string;
 
@@ -38,7 +38,9 @@ export class WorkflowDefinition extends BaseEntity {
 	@UpdateDateColumn()
 	updatedAt: Date;
 
-	@OneToMany(() => WorkflowRun, wfrun => wfrun.workflowDefinition)
+	@DeleteDateColumn()
+	deletedAt: Date;
+
 	runs: WorkflowRun[];
 
 	@JsonColumn({ type: Parameter, array: true })
@@ -78,14 +80,8 @@ export class KubernetesWorkflowDefinition extends WorkflowDefinition {
 		parameters: SetParameter[],
 		svc: K8sJobService,
 	): Promise<KubernetesWorkflowRun> {
-		const job = await svc.create({
-			image: this.image,
-			name: `${this.name}-${v4()}`,
-			env: parameters,
-			command: this.command,
-		});
-		console.log(job.metadata.name);
-		return null;
+		const run = await new KubernetesWorkflowRun(this, u).save();
+		return run.start(parameters, svc);
 	}
 }
 

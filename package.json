@@ -23,7 +23,8 @@
 		"test:e2e-ci": "jest --config ./test/jest-e2e.json",
 		"devenv:setup": "docker-compose -f dev/docker-compose.yml --profile dev up -d",
 		"devenv:setup-ci": "docker-compose -f dev/docker-compose.yml --profile ci up -d",
-		"devenv:teardown": "docker-compose -f dev/docker-compose.yml down"
+		"devenv:teardown": "docker-compose -f dev/docker-compose.yml down",
+		"typeorm": "while read line; do export $line; done < .env > /dev/null && typeorm-ts-node-commonjs --dataSource ./src/config/typeorm-config/typeorm-config.service.ts"
 	},
 	"dependencies": {
 		"@kubernetes/client-node": "^0.17.0",

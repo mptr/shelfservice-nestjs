@@ -10,7 +10,8 @@ export const JsonColumn = <T>(options: Omit<ColumnOptions, 'type' | 'transformer
 		transformer: {
 			to: v => JSON.stringify(v),
 			from: v => {
-				if (options.array) return v.map(x => mapper(x, options.type));
+				v = JSON.parse(v);
+				if (options.array) return v.map((x: T) => mapper(x, options.type));
 				return mapper(v, options.type);
 			},
 		},

@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnsupportedMediaTypeException } from '@nestjs/common';
 import * as k8s from '@kubernetes/client-node';
 import { Observable } from 'rxjs';
 import { K8sConfigService } from 'src/config/k8s-config/k8s-config.service';
+import { V1Pod } from '@kubernetes/client-node';
 
 @Injectable()
 export class K8sJobService {
@@ -31,24 +32,20 @@ export class K8sJobService {
 	}
 
 	async getJobStatus(name: string) {
-		const { body } = await this.batchApi.readNamespacedJob(this.kcConf.namespace, name);
+		const { body } = await this.batchApi.readNamespacedJobStatus(name, this.kcConf.namespace);
 		return body.status;
-		// const status = await this.batchApi.readNamespacedJobStatus('pi', 'default');
-		// console.log(status.body);
+	}
 
-		// get all pods that run the job
-		// const pods = await this.coreApi.listNamespacedPod(
-		// 	'default',
-		// 	undefined,
-		// 	undefined,
-		// 	undefined,
-		// 	undefined,
-		// 	'job-name=pi',
-		// );
-		// obtain their logs
-		// const logs = await this.coreApi.readNamespacedPodLog(pods.body.items[0].metadata.name, 'default');
-		// console.log(logs.body);
-		// return logs;
+	async getPodForJob(name: string): Promise<V1Pod> {
+		const pods = await this.coreApi.listNamespacedPod(
+			this.kcConf.namespace,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			`job-name=${name}`,
+		);
+		return pods.body.items[0];
 	}
 
 	getJobLogs(name: string): Observable<string> {
@@ -57,10 +54,15 @@ export class K8sJobService {
 				clearInterval(interval);
 				subscriber.unsubscribe();
 			};
+			let prevLogLen = 0;
 			const refresh = async () => {
+				console.log('refreshing', name);
 				const status = await this.getJobStatus(name);
-				const logs = await this.coreApi.readNamespacedPodLog(name, this.kcConf.namespace);
-				subscriber.next(logs.body);
+				const pod = await this.getPodForJob(name);
+
+				const logs = await this.coreApi.readNamespacedPodLog(pod.metadata.name, this.kcConf.namespace);
+				subscriber.next(logs.body.substring(prevLogLen));
+				prevLogLen = logs.body.length;
 				if (!status.active) {
 					subscriber.complete();
 					cancel();

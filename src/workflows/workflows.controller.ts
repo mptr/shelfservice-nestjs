@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Redirect } from '@nestjs/common';
 import { KubernetesWorkflowDefinition, WorkflowDefinition } from './workflow-definition.entity';
 import { ApiTags } from '@nestjs/swagger';
 
@@ -9,8 +9,10 @@ import { Public } from 'nest-keycloak-connect';
 @Public()
 export class WorkflowsController {
 	@Post('kubernetes')
-	createKubernetes(@Body() wfDef: KubernetesWorkflowDefinition) {
-		return wfDef.save();
+	@Redirect('', 201)
+	async createKubernetes(@Body() wfDef: KubernetesWorkflowDefinition) {
+		wfDef = await wfDef.save();
+		return { url: wfDef.id };
 	}
 	// @Post('webworker')
 	// createWebworker(@Body() wfDef: WebWorkerWorkflowDefinition) {
