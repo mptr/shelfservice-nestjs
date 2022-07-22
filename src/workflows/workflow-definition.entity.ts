@@ -18,11 +18,10 @@ import { Parameter, SetParameter } from './parameter.entity';
 import { IsArray, IsDataURI, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { JsonColumn } from 'src/util/json-column.decorator';
-import { HttpException } from '@nestjs/common';
 
 @Entity()
 @TableInheritance({ column: { type: 'varchar', name: 'kind' } })
-export class WorkflowDefinition extends BaseEntity {
+export class WorkflowDefinition<S = any> extends BaseEntity {
 	@PrimaryGeneratedColumn('uuid')
 	readonly id: string;
 
@@ -57,21 +56,19 @@ export class WorkflowDefinition extends BaseEntity {
 	@ManyToMany(() => User, user => user.workflows)
 	owners: Promise<User[]>;
 
-	async run(u: User, inps: Record<string, string>, svc: K8sJobService): Promise<WorkflowRun> {
+	async run(u: User, inps: Record<string, string>, svc: S): Promise<WorkflowRun> {
 		const setParams = this.parameterFields.map(p => p.accept(inps));
-		const wfRun = await this.dispatch(u, setParams, svc).catch(e => {
-			throw new HttpException(e.body, e.statusCode);
-		});
+		const wfRun = await this.dispatch(u, setParams, svc);
 		return wfRun.save();
 	}
 
-	protected dispatch(_u: User, _parameters: SetParameter[], _svc: any): Promise<WorkflowRun> {
-		throw new Error('Cannot run abstract workflow');
+	protected async dispatch(_u: User, _parameters: SetParameter[], _svc: S): Promise<WorkflowRun> {
+		throw new Error('Cannot dispatch abstract workflow');
 	}
 }
 
 @ChildEntity()
-export class KubernetesWorkflowDefinition extends WorkflowDefinition {
+export class KubernetesWorkflowDefinition extends WorkflowDefinition<K8sJobService> {
 	@Column()
 	@IsString()
 	image: string;
@@ -89,8 +86,7 @@ export class KubernetesWorkflowDefinition extends WorkflowDefinition {
 		parameters: SetParameter[],
 		svc: K8sJobService,
 	): Promise<KubernetesWorkflowRun> {
-		const run = await new KubernetesWorkflowRun(this, u).save();
-		return run.start(parameters, svc);
+		return new KubernetesWorkflowRun(this, u, parameters).save().then(r => r.start(svc));
 	}
 }
 

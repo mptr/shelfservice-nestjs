@@ -14,15 +14,22 @@ export class K8sJobService {
 	}
 
 	async create(container: k8s.V1Container) {
-		const { body } = await this.batchApi.createNamespacedJob(this.kcConf.namespace, {
-			apiVersion: 'batch/v1',
-			kind: 'Job',
-			metadata: { name: container.name },
-			spec: {
-				template: { spec: { containers: [container], restartPolicy: 'Never' } },
-				backoffLimit: 0,
-			},
-		});
+		console.log('prepost');
+		const { body } = await this.batchApi
+			.createNamespacedJob(this.kcConf.namespace, {
+				apiVersion: 'batch/v1',
+				kind: 'Job',
+				metadata: { name: container.name },
+				spec: {
+					template: { spec: { containers: [container], restartPolicy: 'Never' } },
+					backoffLimit: 0,
+				},
+			})
+			.catch(e => {
+				console.log(e);
+				throw new Error(e);
+			});
+		console.log('postpost');
 		return body;
 	}
 
@@ -53,20 +60,21 @@ export class K8sJobService {
 			undefined,
 			undefined,
 			undefined,
-			p.latestOnly ? undefined : 2,
+			// p.latestOnly ? 2 : undefined, // grab only last 2 seconds of logs if flag is set // TODO
 		);
 		return logs.body;
 	}
 
 	getJobLogs(name: string): Observable<string> {
 		return new Observable<string>(subscriber => {
+			let loopTimeout: NodeJS.Timeout; // loop timer
+			let prevLogLen = 0; // length of previous emitted log
+
 			const cancel = () => {
 				// teardown
-				clearInterval(interval);
+				clearTimeout(loopTimeout);
 				subscriber.unsubscribe();
 			};
-
-			let prevLogLen = 0; // length of previous emitted log
 
 			// loop function
 			const refresh = async (latestOnly: boolean) => {
@@ -74,16 +82,16 @@ export class K8sJobService {
 				const pod = await this.getPodForJob(name);
 
 				const logs = await this.getPodLogs({ podName: pod.metadata.name, latestOnly });
+
 				subscriber.next(logs.substring(prevLogLen)); // emit only new section of log
 				prevLogLen = logs.length; // update prevLogLen
-				if (!status.active) {
-					// if job is done, stop loop
+
+				if (status.active) loopTimeout = setTimeout(() => refresh(true), 500); // re-run this function after 500ms
+				else {
 					subscriber.complete();
 					cancel();
 				}
 			};
-
-			const interval = setInterval(() => refresh(true), 500); // refresh every 500ms
 			refresh(false); // initial fetch
 			return cancel; // teardown function
 		});

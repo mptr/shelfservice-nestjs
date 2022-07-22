@@ -11,10 +11,11 @@ import { ValidateNested } from 'class-validator';
 @Entity()
 @TableInheritance({ column: { type: 'varchar', name: 'kind' } })
 export class WorkflowRun extends BaseEntity {
-	constructor(wfDef?: WorkflowDefinition, u?: User) {
+	constructor(wfDef?: WorkflowDefinition, u?: User, parameters?: SetParameter[]) {
 		super();
-		this.workflowDefinition = Promise.resolve(wfDef);
-		this.ranBy = Promise.resolve(u);
+		if (wfDef) this.workflowDefinition = Promise.resolve(wfDef); // TODO: remove checks
+		if (u) this.ranBy = Promise.resolve(u);
+		if (parameters) this.parameters = parameters;
 	}
 
 	@PrimaryGeneratedColumn('uuid')
@@ -36,9 +37,8 @@ export class WorkflowRun extends BaseEntity {
 	// @OneToOne(() => WorkflowLog)
 	log: Promise<any>;
 
-	start(parameters: SetParameter[], _svc: any) {
+	start(_svc: any) {
 		this.startedAt = new Date();
-		this.parameters = parameters;
 		return this.save();
 	}
 
@@ -57,21 +57,21 @@ export class WorkflowRun extends BaseEntity {
 
 @ChildEntity()
 export class KubernetesWorkflowRun extends WorkflowRun {
-	constructor(wfDef?: KubernetesWorkflowDefinition, u?: User) {
-		super(wfDef, u);
+	constructor(wfDef?: KubernetesWorkflowDefinition, u?: User, parameters?: SetParameter[]) {
+		super(wfDef, u, parameters);
 	}
 
 	@ManyToOne(() => KubernetesWorkflowDefinition, wdef => wdef.runs, { nullable: false })
 	override workflowDefinition: Promise<KubernetesWorkflowDefinition>;
 
-	override async start(params: SetParameter[], jobService: K8sJobService) {
+	override async start(jobService: K8sJobService) {
 		await jobService.create({
 			image: (await this.workflowDefinition).image,
 			name: await this.jobTag(),
-			env: params,
+			env: this.parameters,
 			command: (await this.workflowDefinition).command,
 		});
-		return super.start(params, jobService);
+		return super.start(jobService);
 	}
 
 	override async status(svc: K8sJobService) {

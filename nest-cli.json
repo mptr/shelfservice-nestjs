@@ -3,6 +3,6 @@
 	"collection": "@nestjs/schematics",
 	"sourceRoot": "src",
 	"compilerOptions": {
-		"assets": ["src/**/*.yaml", "src/**/*.yml"]
+		"assets": ["**/*.yaml", "**/*.yml"]
 	}
 }
