@@ -10,14 +10,18 @@ import { Public } from 'nest-keycloak-connect';
 export class WorkflowsController {
 	@Post('kubernetes')
 	@Redirect('', 201)
-	async createKubernetes(@Body() wfDef: KubernetesWorkflowDefinition) {
-		wfDef = await wfDef.save();
-		return { url: wfDef.id };
+	createKubernetes(@Body() wfDef: KubernetesWorkflowDefinition) {
+		return this.create(wfDef);
 	}
 	// @Post('webworker')
 	// createWebworker(@Body() wfDef: WebWorkerWorkflowDefinition) {
 	// 	return wfDef.save();
 	// }
+
+	protected async create(wfDef: WorkflowDefinition) {
+		wfDef = await wfDef.save();
+		return { url: wfDef.id };
+	}
 
 	@Get()
 	findAll() {

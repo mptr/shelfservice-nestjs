@@ -1,5 +1,6 @@
+import { WorkflowDefinition } from 'src/workflows/workflow-definition.entity';
 import { WorkflowRun } from 'src/workflows/workflow-runs/workflow-run.entity';
-import { BaseEntity, Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseEntity, Column, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class User extends BaseEntity {
@@ -15,8 +16,11 @@ export class User extends BaseEntity {
 	@Column()
 	lastName: string;
 
+	@ManyToMany(() => WorkflowDefinition, wf => wf.owners)
+	workflows: Promise<WorkflowDefinition[]>;
+
 	@OneToMany(() => WorkflowRun, wfrun => wfrun.ranBy)
-	workflowRuns: WorkflowRun[];
+	workflowRuns: Promise<WorkflowRun[]>;
 
 	constructor(p?: Omit<User, 'id'>) {
 		super();

@@ -5,6 +5,7 @@ import {
 	CreateDateColumn,
 	DeleteDateColumn,
 	Entity,
+	ManyToMany,
 	OneToMany,
 	PrimaryGeneratedColumn,
 	TableInheritance,
@@ -14,7 +15,7 @@ import { User } from 'src/users/user.entity';
 import { KubernetesWorkflowRun, WorkflowRun } from './workflow-runs/workflow-run.entity';
 import { K8sJobService } from './k8s-job.service';
 import { Parameter, SetParameter } from './parameter.entity';
-import { IsArray, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsDataURI, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { JsonColumn } from 'src/util/json-column.decorator';
 import { HttpException } from '@nestjs/common';
@@ -32,6 +33,11 @@ export class WorkflowDefinition extends BaseEntity {
 	@IsString()
 	name: string;
 
+	@Column({ nullable: true })
+	@IsOptional()
+	@IsDataURI()
+	icon: string;
+
 	@CreateDateColumn()
 	createdAt: Date;
 
@@ -41,12 +47,15 @@ export class WorkflowDefinition extends BaseEntity {
 	@DeleteDateColumn()
 	deletedAt: Date;
 
-	runs: WorkflowRun[];
+	runs: Promise<WorkflowRun[]>;
 
 	@JsonColumn({ type: Parameter, array: true })
 	@Type(() => Parameter)
 	@ValidateNested()
 	parameterFields: Parameter[];
+
+	@ManyToMany(() => User, user => user.workflows)
+	owners: Promise<User[]>;
 
 	async run(u: User, inps: Record<string, string>, svc: K8sJobService): Promise<WorkflowRun> {
 		const setParams = this.parameterFields.map(p => p.accept(inps));
@@ -73,7 +82,7 @@ export class KubernetesWorkflowDefinition extends WorkflowDefinition {
 	command: string[];
 
 	@OneToMany(() => KubernetesWorkflowRun, wfrun => wfrun.workflowDefinition)
-	override runs: KubernetesWorkflowRun[];
+	override runs: Promise<KubernetesWorkflowRun[]>;
 
 	protected override async dispatch(
 		u: User,

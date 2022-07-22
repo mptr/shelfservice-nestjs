@@ -4,38 +4,54 @@ import { BaseEntity, ChildEntity, Column, Entity, ManyToOne, PrimaryGeneratedCol
 import { K8sJobService } from '../k8s-job.service';
 import { Observable } from 'rxjs';
 import { SetParameter } from '../parameter.entity';
+import { JsonColumn } from 'src/util/json-column.decorator';
+import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
 
 @Entity()
 @TableInheritance({ column: { type: 'varchar', name: 'kind' } })
 export class WorkflowRun extends BaseEntity {
 	constructor(wfDef?: WorkflowDefinition, u?: User) {
 		super();
-		this.workflowDefinition = wfDef;
-		this.ranBy = u;
+		this.workflowDefinition = Promise.resolve(wfDef);
+		this.ranBy = Promise.resolve(u);
 	}
 
 	@PrimaryGeneratedColumn('uuid')
 	readonly id: string;
 
 	@ManyToOne(() => User, user => user.workflowRuns)
-	ranBy: User;
+	ranBy: Promise<User>;
 
-	workflowDefinition: WorkflowDefinition;
+	workflowDefinition: Promise<WorkflowDefinition>;
 
 	@Column({ nullable: true })
 	startedAt: Date;
 
-	start(_parameters: SetParameter[], _: any) {
+	@JsonColumn({ type: SetParameter, array: true })
+	@Type(() => SetParameter)
+	@ValidateNested()
+	parameters: SetParameter[];
+
+	// @OneToOne(() => WorkflowLog)
+	log: Promise<any>;
+
+	start(parameters: SetParameter[], _svc: any) {
 		this.startedAt = new Date();
+		this.parameters = parameters;
 		return this.save();
+	}
+
+	status(_: any) {
+		throw new Error('Cannot get status from abstract WorkflowRun.');
 	}
 
 	streamLog(_: any) {
 		throw new Error('Cannot get logs from abstract WorkflowRun.');
 	}
 
-	get jobTag() {
-		return `${this.workflowDefinition.name}-${this.id}`;
+	async jobTag() {
+		return `${(await this.workflowDefinition).name}-${this.id}`;
 	}
 }
 
@@ -46,20 +62,25 @@ export class KubernetesWorkflowRun extends WorkflowRun {
 	}
 
 	@ManyToOne(() => KubernetesWorkflowDefinition, wdef => wdef.runs, { nullable: false })
-	override workflowDefinition: KubernetesWorkflowDefinition;
+	override workflowDefinition: Promise<KubernetesWorkflowDefinition>;
 
 	override async start(params: SetParameter[], jobService: K8sJobService) {
 		await jobService.create({
-			image: this.workflowDefinition.image,
-			name: this.jobTag,
+			image: (await this.workflowDefinition).image,
+			name: await this.jobTag(),
 			env: params,
-			command: this.workflowDefinition.command,
+			command: (await this.workflowDefinition).command,
 		});
 		return super.start(params, jobService);
 	}
 
-	override streamLog(svc: K8sJobService): Observable<string> {
-		return svc.getJobLogs(this.jobTag);
+	override async status(svc: K8sJobService) {
+		if (await this.log) return null;
+		else return svc.getJobStatus(await this.jobTag());
+	}
+
+	override async streamLog(svc: K8sJobService): Promise<Observable<string>> {
+		return svc.getJobLogs(await this.jobTag());
 	}
 }
 

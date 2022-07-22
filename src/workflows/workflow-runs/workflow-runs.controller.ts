@@ -26,19 +26,16 @@ export class WorkflowRunsController {
 
 	@Get(':id')
 	findOne(@Param('wfid') wfId: string, @Param('id') id: string) {
-		return WorkflowRun.findOneOrFail({ where: { id, workflowDefinition: { id: wfId } } });
+		return WorkflowRun.findOneOrFail({
+			where: { id, workflowDefinition: { id: wfId } },
+			relations: { workflowDefinition: true },
+		});
 	}
 
 	@Sse(':id/log')
 	async streamLog(@Param('wfid') wfId: string, @Param('id') id: string) {
 		const wfr = await WorkflowRun.findOneOrFail({
-			where: {
-				id,
-				workflowDefinition: { id: wfId },
-			},
-			relations: {
-				workflowDefinition: true,
-			},
+			where: { id, workflowDefinition: { id: wfId } },
 		});
 		return wfr.streamLog(this.k8sService);
 	}
