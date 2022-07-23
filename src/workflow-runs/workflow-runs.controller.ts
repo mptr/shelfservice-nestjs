@@ -21,7 +21,10 @@ export class WorkflowRunsController {
 
 	@Get()
 	findAll(@Param('wfid') wfId: string) {
-		return WorkflowRun.find({ where: { workflowDefinition: { id: wfId } } });
+		return WorkflowRun.find({
+			where: { workflowDefinition: { id: wfId } },
+			select: ['id', 'ranBy', 'status'],
+		});
 	}
 
 	@Get(':id')
@@ -33,11 +36,11 @@ export class WorkflowRunsController {
 	}
 
 	@Sse(':id/log')
-	// set swagger to use sse
 	async streamLog(@Param('wfid') wfId: string, @Param('id') id: string) {
 		const wfr = await WorkflowRun.findOneOrFail({
 			where: { id, workflowDefinition: { id: wfId } },
 		});
+		if (wfr.status !== 'running') return null;
 		return wfr.streamLog(this.k8sService);
 	}
 }

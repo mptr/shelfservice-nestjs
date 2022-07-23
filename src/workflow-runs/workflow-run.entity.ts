@@ -46,20 +46,33 @@ export class WorkflowRun extends BaseEntity {
 	@OneToOne(() => WorkflowRunLog, log => log.run)
 	log: Promise<WorkflowRunLog>;
 
+	@Column({ nullable: true })
+	result: boolean;
+
+	@Column({
+		generatedType: 'STORED',
+		asExpression: `(
+			CASE 
+			WHEN startedAt IS NULL THEN 'prepared' 
+			WHEN result IS TRUE THEN 'success'
+			WHEN result IS FALSE THEN 'failure'
+			ELSE 'running' 
+			END
+		)`,
+	})
+	readonly status: 'prepared' | 'running' | 'finished' | 'failed';
+
 	start(_svc: any) {
 		this.startedAt = new Date();
 		return this.save();
-	}
-
-	status(_: any) {
-		throw new Error('Cannot get status from abstract WorkflowRun.');
 	}
 
 	streamLog(_: any) {
 		throw new Error('Cannot get logs from abstract WorkflowRun.');
 	}
 
-	async archive(logs: string) {
+	async archive(result: boolean, logs: string) {
+		this.result = result;
 		this.log = Promise.resolve(new WorkflowRunLog(this, logs));
 		await this.save();
 	}
@@ -81,11 +94,6 @@ export class KubernetesWorkflowRun extends WorkflowRun {
 	override async start(jobService: K8sJobService) {
 		await jobService.apply(this);
 		return super.start(jobService);
-	}
-
-	override async status(svc: K8sJobService) {
-		if (await this.log) return null;
-		else return svc.getStatus(this);
 	}
 
 	override async streamLog(svc: K8sJobService): Promise<Observable<string>> {

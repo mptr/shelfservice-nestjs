@@ -28,7 +28,7 @@ export class WorkflowLogService {
 		if (!wfRun) return console.warn("can't find workflow run for job:", j.metadata.name);
 
 		// store logs in the database
-		await wfRun.archive(await this.k8sService.getLog(wfRun));
+		await wfRun.archive(!j.status.failed, await this.k8sService.getLog(wfRun));
 
 		// delete the job
 		await this.k8sService.deleteJob(j);
