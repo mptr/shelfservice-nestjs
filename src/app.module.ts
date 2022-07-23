@@ -7,6 +7,7 @@ import { ConfigModule } from './config/config.module';
 import { TypeormConfigService } from './config/typeorm-config/typeorm-config.service';
 import { AuthGuard, KeycloakConnectModule } from 'nest-keycloak-connect';
 import { APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { WorkflowLoggingModule } from './workflow-logging/workflow-logging.module';
 
 @Module({
 	imports: [
@@ -21,6 +22,7 @@ import { APP_GUARD, APP_PIPE } from '@nestjs/core';
 		UsersModule,
 		WorkflowsModule,
 		ConfigModule,
+		WorkflowLoggingModule, // todo: move to separate app
 	],
 	providers: [
 		{ provide: APP_GUARD, useExisting: AuthGuard },

@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, Redirect, Sse } from '@nestjs/common';
 import { Public } from 'nest-keycloak-connect';
-import { WorkflowDefinition } from '../workflow-definition.entity';
-import { K8sJobService } from '../k8s-job.service';
+import { WorkflowDefinition } from '../workflows/workflow-definition.entity';
+import { K8sJobService } from '../kubernetes/k8s-job.service';
 import { WorkflowRun } from './workflow-run.entity';
 import { ApiBody } from '@nestjs/swagger';
 

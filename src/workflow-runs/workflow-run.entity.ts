@@ -1,9 +1,18 @@
 import { User } from 'src/users/user.entity';
 import { KubernetesWorkflowDefinition, WorkflowDefinition } from 'src/workflows/workflow-definition.entity';
-import { BaseEntity, ChildEntity, Column, Entity, ManyToOne, PrimaryGeneratedColumn, TableInheritance } from 'typeorm';
-import { K8sJobService } from '../k8s-job.service';
+import {
+	BaseEntity,
+	ChildEntity,
+	Column,
+	Entity,
+	ManyToOne,
+	OneToOne,
+	PrimaryGeneratedColumn,
+	TableInheritance,
+} from 'typeorm';
+import { K8sJobService } from '../kubernetes/k8s-job.service';
 import { Observable } from 'rxjs';
-import { SetParameter } from '../parameter.entity';
+import { SetParameter } from '../workflows/parameter.entity';
 import { JsonColumn } from 'src/util/json-column.decorator';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
@@ -13,8 +22,8 @@ import { ValidateNested } from 'class-validator';
 export class WorkflowRun extends BaseEntity {
 	constructor(wfDef?: WorkflowDefinition, u?: User, parameters?: SetParameter[]) {
 		super();
-		if (wfDef) this.workflowDefinition = Promise.resolve(wfDef); // TODO: remove checks
-		if (u) this.ranBy = Promise.resolve(u);
+		if (wfDef) this.workflowDefinition = wfDef;
+		if (u) this.ranBy = Promise.resolve(u); // TODO: remove checks
 		if (parameters) this.parameters = parameters;
 	}
 
@@ -24,18 +33,18 @@ export class WorkflowRun extends BaseEntity {
 	@ManyToOne(() => User, user => user.workflowRuns)
 	ranBy: Promise<User>;
 
-	workflowDefinition: Promise<WorkflowDefinition>;
+	workflowDefinition: WorkflowDefinition;
 
 	@Column({ nullable: true })
 	startedAt: Date;
 
-	@JsonColumn({ type: SetParameter, array: true })
+	@JsonColumn({ type: SetParameter, array: true, update: false })
 	@Type(() => SetParameter)
 	@ValidateNested()
 	parameters: SetParameter[];
 
-	// @OneToOne(() => WorkflowLog)
-	log: Promise<any>;
+	@OneToOne(() => WorkflowRunLog, log => log.run)
+	log: Promise<WorkflowRunLog>;
 
 	start(_svc: any) {
 		this.startedAt = new Date();
@@ -50,8 +59,13 @@ export class WorkflowRun extends BaseEntity {
 		throw new Error('Cannot get logs from abstract WorkflowRun.');
 	}
 
-	async jobTag() {
-		return `${(await this.workflowDefinition).name}-${this.id}`;
+	async archive(logs: string) {
+		const l = await new WorkflowRunLog(this, logs).save();
+		this.log = Promise.resolve(l);
+	}
+
+	get jobTag() {
+		return `${this.workflowDefinition.name}-${this.id}`;
 	}
 }
 
@@ -61,26 +75,21 @@ export class KubernetesWorkflowRun extends WorkflowRun {
 		super(wfDef, u, parameters);
 	}
 
-	@ManyToOne(() => KubernetesWorkflowDefinition, wdef => wdef.runs, { nullable: false })
-	override workflowDefinition: Promise<KubernetesWorkflowDefinition>;
+	@ManyToOne(() => KubernetesWorkflowDefinition, wdef => wdef.runs, { nullable: false, eager: true })
+	override workflowDefinition: KubernetesWorkflowDefinition;
 
 	override async start(jobService: K8sJobService) {
-		await jobService.create({
-			image: (await this.workflowDefinition).image,
-			name: await this.jobTag(),
-			env: this.parameters,
-			command: (await this.workflowDefinition).command,
-		});
+		await jobService.apply(this);
 		return super.start(jobService);
 	}
 
 	override async status(svc: K8sJobService) {
 		if (await this.log) return null;
-		else return svc.getJobStatus(await this.jobTag());
+		else return svc.getStatus(this);
 	}
 
 	override async streamLog(svc: K8sJobService): Promise<Observable<string>> {
-		return svc.getJobLogs(await this.jobTag());
+		return svc.getLogStream(this);
 	}
 }
 
@@ -89,3 +98,21 @@ export class KubernetesWorkflowRun extends WorkflowRun {
 // 	@ManyToOne(() => WebWorkerWorkflowDefinition, wdef => wdef.runs)
 // 	override workflowDefinition: WebWorkerWorkflowDefinition;
 // }
+
+@Entity()
+export class WorkflowRunLog extends BaseEntity {
+	constructor(run: WorkflowRun, data: string) {
+		super();
+		this.run = run;
+		this.data = data;
+	}
+
+	@PrimaryGeneratedColumn()
+	id: number;
+
+	@OneToOne(() => WorkflowRun, run => run.log, { eager: true, nullable: false })
+	run: WorkflowRun;
+
+	@Column({ update: false })
+	data: string;
+}

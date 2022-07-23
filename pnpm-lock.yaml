@@ -10,6 +10,7 @@ specifiers:
   '@nestjs/core': 9.0.1
   '@nestjs/mapped-types': '*'
   '@nestjs/platform-express': 9.0.1
+  '@nestjs/schedule': ^2.1.0
   '@nestjs/schematics': 9.0.1
   '@nestjs/swagger': 6.0.1
   '@nestjs/testing': 9.0.1
@@ -59,6 +60,7 @@ dependencies:
   '@nestjs/core': 9.0.1_a7eah4kgzhdok64pm3jmdf7do4
   '@nestjs/mapped-types': 1.1.0_ym6kpsfi2wmkrgful366ss73dm
   '@nestjs/platform-express': 9.0.1_75qmzffkw5ecbb3mxgbk2g6nku
+  '@nestjs/schedule': 2.1.0_hukrmcuhf2odavpe3mdd26srgi
   '@nestjs/swagger': 6.0.1_pbtujvhjpxm2vi6pjgzxvp25au
   '@nestjs/typeorm': 9.0.0_abb33aogac2ku4b7geqnl6bo6i
   class-transformer: 0.5.1
@@ -1156,6 +1158,20 @@ packages:
       tslib: 2.4.0
     transitivePeerDependencies:
       - supports-color
+
+  /@nestjs/schedule/2.1.0_hukrmcuhf2odavpe3mdd26srgi:
+    resolution: {integrity: sha512-4Xaw56WiW3VsxEPPnj/iDtfjcO+sUZyYAeRxD0gnF5havncxjAnv52Iw7UH3DuzzUA784xPGgGje3Fq0Gu925g==}
+    peerDependencies:
+      '@nestjs/common': ^7.0.0 || ^8.0.0 || ^9.0.0
+      '@nestjs/core': ^7.0.0 || ^8.0.0 || ^9.0.0
+      reflect-metadata: ^0.1.12
+    dependencies:
+      '@nestjs/common': 9.0.1_kgmvgmqc4iohdboj3f7yqhrie4
+      '@nestjs/core': 9.0.1_a7eah4kgzhdok64pm3jmdf7do4
+      cron: 2.0.0
+      reflect-metadata: 0.1.13
+      uuid: 8.3.2
+    dev: false
 
   /@nestjs/schematics/9.0.1_nobats3jkocaued6l3papcxri4:
     resolution: {integrity: sha512-QU7GbnQvADFXdumcdADmv4vil3bhnYl2IFHWKieRt0MgIhghgBxIB7kDKWhswcuZ0kZztVbyYjo9aCrlf62fcw==}
@@ -2884,6 +2900,12 @@ packages:
 
   /create-require/1.1.1:
     resolution: {integrity: sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==}
+
+  /cron/2.0.0:
+    resolution: {integrity: sha512-RPeRunBCFr/WEo7WLp8Jnm45F/ziGJiHVvVQEBSDTSGu6uHW49b2FOP2O14DcXlGJRLhwE7TIoDzHHK4KmlL6g==}
+    dependencies:
+      luxon: 1.28.0
+    dev: false
 
   /cross-spawn/7.0.3:
     resolution: {integrity: sha512-iRDPJKUPVEND7dHPO8rkbOnPpyDygcDFtWjpeWNCgy8WP2rXcxXL8TskReQl6OrB2G7+UJrags1q15Fudc7G6w==}
@@ -5030,6 +5052,10 @@ packages:
     engines: {node: '>=10'}
     dependencies:
       yallist: 4.0.0
+
+  /luxon/1.28.0:
+    resolution: {integrity: sha512-TfTiyvZhwBYM/7QdAVDh+7dBTBA29v4ik0Ce9zda3Mnf8on1S5KJI8P2jKFZ8+5C0jhmr0KwJEO/Wdpm0VeWJQ==}
+    dev: false
 
   /macos-release/2.5.0:
     resolution: {integrity: sha512-EIgv+QZ9r+814gjJj0Bt5vSLJLzswGmSUbUpbi9AIr/fsN2IWFBl2NucV9PAiek+U1STK468tEkxmVYUtuAN3g==}

@@ -1,5 +1,5 @@
 import { WorkflowDefinition } from 'src/workflows/workflow-definition.entity';
-import { WorkflowRun } from 'src/workflows/workflow-runs/workflow-run.entity';
+import { WorkflowRun } from 'src/workflow-runs/workflow-run.entity';
 import { BaseEntity, Column, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()

@@ -12,8 +12,8 @@ import {
 	UpdateDateColumn,
 } from 'typeorm';
 import { User } from 'src/users/user.entity';
-import { KubernetesWorkflowRun, WorkflowRun } from './workflow-runs/workflow-run.entity';
-import { K8sJobService } from './k8s-job.service';
+import { KubernetesWorkflowRun, WorkflowRun } from '../workflow-runs/workflow-run.entity';
+import { K8sJobService } from '../kubernetes/k8s-job.service';
 import { Parameter, SetParameter } from './parameter.entity';
 import { IsArray, IsDataURI, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
