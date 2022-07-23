@@ -37,7 +37,8 @@ export class WorkflowLogService {
 
 	protected async processActive(j: V1Job) {
 		const JOB_CANCEL_TIMEOUT = 10 * 60 * 1000;
-		if (j.status.startTime.getTime() + JOB_CANCEL_TIMEOUT >= new Date().getTime()) return; // do nothing if job is younger than JOB_CANCEL_TIMEOUT
+		if (j.status.startTime.getTime() + JOB_CANCEL_TIMEOUT >= new Date().getTime())
+			return console.log(j.metadata.name, 'is still running'); // do nothing if job is younger than JOB_CANCEL_TIMEOUT
 		console.warn('stale job detected:', j.metadata.name); // TODO: WARN USER
 	}
 }

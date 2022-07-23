@@ -33,6 +33,7 @@ export class WorkflowRunsController {
 	}
 
 	@Sse(':id/log')
+	// set swagger to use sse
 	async streamLog(@Param('wfid') wfId: string, @Param('id') id: string) {
 		const wfr = await WorkflowRun.findOneOrFail({
 			where: { id, workflowDefinition: { id: wfId } },

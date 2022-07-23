@@ -58,8 +58,7 @@ export class WorkflowDefinition<S = any> extends BaseEntity {
 
 	async run(u: User, inps: Record<string, string>, svc: S): Promise<WorkflowRun> {
 		const setParams = this.parameterFields.map(p => p.accept(inps));
-		const wfRun = await this.dispatch(u, setParams, svc);
-		return wfRun.save();
+		return this.dispatch(u, setParams, svc);
 	}
 
 	protected async dispatch(_u: User, _parameters: SetParameter[], _svc: S): Promise<WorkflowRun> {

@@ -60,8 +60,8 @@ export class WorkflowRun extends BaseEntity {
 	}
 
 	async archive(logs: string) {
-		const l = await new WorkflowRunLog(this, logs).save();
-		this.log = Promise.resolve(l);
+		this.log = Promise.resolve(new WorkflowRunLog(this, logs));
+		await this.save();
 	}
 
 	get jobTag() {
@@ -101,10 +101,10 @@ export class KubernetesWorkflowRun extends WorkflowRun {
 
 @Entity()
 export class WorkflowRunLog extends BaseEntity {
-	constructor(run: WorkflowRun, data: string) {
+	constructor(run?: WorkflowRun, data?: string) {
 		super();
-		this.run = run;
-		this.data = data;
+		if (run) this.run = run;
+		if (data) this.data = data;
 	}
 
 	@PrimaryGeneratedColumn()
