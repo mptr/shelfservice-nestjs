@@ -32,6 +32,10 @@ export class WorkflowDefinition<S = any> extends BaseEntity {
 	@IsString()
 	name: string;
 
+	@Column()
+	@IsString()
+	description: string;
+
 	@Column({ nullable: true })
 	@IsOptional()
 	@IsDataURI()
@@ -45,6 +49,12 @@ export class WorkflowDefinition<S = any> extends BaseEntity {
 
 	@DeleteDateColumn()
 	deletedAt: Date;
+
+	@Column({
+		generatedType: 'STORED',
+		asExpression: `"parameterFields" != ('[]')::jsonb`,
+	})
+	readonly hasParams: boolean;
 
 	runs: Promise<WorkflowRun[]>;
 
@@ -66,7 +76,7 @@ export class WorkflowDefinition<S = any> extends BaseEntity {
 	}
 }
 
-@ChildEntity()
+@ChildEntity('kubernetes')
 export class KubernetesWorkflowDefinition extends WorkflowDefinition<K8sJobService> {
 	@Column()
 	@IsString()
@@ -89,7 +99,7 @@ export class KubernetesWorkflowDefinition extends WorkflowDefinition<K8sJobServi
 	}
 }
 
-// @ChildEntity()
+// @ChildEntity('webworker')
 // export class WebWorkerWorkflowDefinition extends WorkflowDefinition {
 // 	@Column()
 // 	script: string;

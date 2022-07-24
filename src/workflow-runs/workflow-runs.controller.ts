@@ -23,7 +23,8 @@ export class WorkflowRunsController {
 	findAll(@Param('wfid') wfId: string) {
 		return WorkflowRun.find({
 			where: { workflowDefinition: { id: wfId } },
-			select: ['id', 'ranBy', 'status'],
+			relations: { ranBy: true },
+			select: ['id', 'ranBy', 'status', 'startedAt'],
 		});
 	}
 

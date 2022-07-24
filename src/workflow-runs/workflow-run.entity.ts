@@ -53,7 +53,7 @@ export class WorkflowRun extends BaseEntity {
 		generatedType: 'STORED',
 		asExpression: `(
 			CASE 
-			WHEN startedAt IS NULL THEN 'prepared' 
+			WHEN "startedAt" IS NULL THEN 'prepared' 
 			WHEN result IS TRUE THEN 'success'
 			WHEN result IS FALSE THEN 'failure'
 			ELSE 'running' 

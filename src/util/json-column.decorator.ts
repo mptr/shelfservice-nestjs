@@ -5,7 +5,7 @@ type CtorType<T> = new (...args: any[]) => T;
 export const JsonColumn = <T>(options: Omit<ColumnOptions, 'type' | 'transformer'> & { type: CtorType<T> }) =>
 	Column({
 		...options,
-		type: 'json',
+		type: 'jsonb',
 		array: false,
 		transformer: {
 			to: v => JSON.stringify(v),
