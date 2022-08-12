@@ -9,7 +9,7 @@ import { Public } from 'nest-keycloak-connect';
 @Public()
 export class WorkflowsController {
 	@Post('kubernetes')
-	@Redirect('', 201)
+	@Redirect()
 	createKubernetes(@Body() wfDef: KubernetesWorkflowDefinition) {
 		return this.create(wfDef);
 	}

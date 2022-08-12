@@ -1,6 +1,5 @@
 import { V1Job } from '@kubernetes/client-node';
 import { Injectable } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
 import { KubernetesWorkflowRun } from 'src/workflow-runs/workflow-run.entity';
 import { K8sJobService } from '../kubernetes/k8s-job.service';
 
@@ -8,7 +7,7 @@ import { K8sJobService } from '../kubernetes/k8s-job.service';
 export class WorkflowLogService {
 	constructor(protected readonly k8sService: K8sJobService) {}
 	// every 10 seconds
-	@Cron('*/10 * * * * *')
+	// @Cron('*/10 * * * * *')
 	async collectLogs() {
 		console.log('collecting logs');
 		const js = await this.k8sService.getAllJobs();

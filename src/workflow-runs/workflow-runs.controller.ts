@@ -11,7 +11,7 @@ export class WorkflowRunsController {
 	constructor(protected readonly k8sService: K8sJobService) {}
 
 	@Post()
-	@Redirect('', 201)
+	@Redirect()
 	@ApiBody({ type: Object })
 	async create(@Param('wfid') wfId: string, @Body() parameters: Record<string, string>) {
 		const wf = await WorkflowDefinition.findOneOrFail({ where: { id: wfId } });

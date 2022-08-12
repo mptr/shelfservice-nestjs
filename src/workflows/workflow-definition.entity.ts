@@ -1,5 +1,6 @@
 import {
 	BaseEntity,
+	Check,
 	ChildEntity,
 	Column,
 	CreateDateColumn,
@@ -21,6 +22,7 @@ import { JsonColumn } from 'src/util/json-column.decorator';
 
 @Entity()
 @TableInheritance({ column: { type: 'varchar', name: 'kind' } })
+@Check('workflow_kind_req', `"kind" IS NOT NULL AND "kind" <> 'WorkflowDefinition'`)
 export class WorkflowDefinition<S = any> extends BaseEntity {
 	@PrimaryGeneratedColumn('uuid')
 	readonly id: string;
