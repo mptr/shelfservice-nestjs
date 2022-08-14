@@ -19,6 +19,8 @@ export class WorkflowsController {
 	// }
 
 	protected async create(wfDef: WorkflowDefinition) {
+		console.log('new workflow');
+		console.log(wfDef);
 		wfDef = await wfDef.save();
 		return { url: wfDef.id };
 	}

@@ -60,8 +60,15 @@ export class WorkflowDefinition<S = any> extends BaseEntity {
 
 	runs: Promise<WorkflowRun[]>;
 
-	@JsonColumn({ type: Parameter, array: true })
-	@Type(() => Parameter)
+	@JsonColumn({
+		type: Parameter,
+		array: true,
+		discriminator: Parameter.discriminator,
+	})
+	@Type(() => Parameter, {
+		keepDiscriminatorProperty: true,
+		discriminator: Parameter.discriminator,
+	})
 	@ValidateNested()
 	parameterFields: Parameter[];
 
