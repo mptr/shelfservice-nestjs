@@ -20,9 +20,8 @@ export const JsonColumn = <T>(
 		type: 'jsonb',
 		array: false,
 		transformer: {
-			to: v => JSON.stringify(v),
+			to: v => v,
 			from: v => {
-				v = JSON.parse(v);
 				const getType = (x: T) => {
 					const d = options.discriminator;
 					if (!d) return options.type;

@@ -60,7 +60,7 @@ export class Parameter {
 
 	@IsString()
 	@IsOptional()
-	description?: string;
+	description: string = null;
 
 	@IsString()
 	displayName: string;
@@ -89,7 +89,7 @@ export class RequirableParameter extends Parameter {
 
 	@IsString()
 	@IsOptional()
-	hint?: string;
+	hint: string = null;
 
 	override get acceptConditions(): ParamValidator[] {
 		return super.acceptConditions.concat([
@@ -108,7 +108,7 @@ export class StringParameter extends RequirableParameter {
 
 	@IsRegEx()
 	@IsOptional()
-	pattern?: string;
+	pattern: string = null;
 
 	@IsBoolean()
 	multiline = false;
@@ -119,7 +119,7 @@ export class StringParameter extends RequirableParameter {
 	override get acceptConditions(): ParamValidator[] {
 		return super.acceptConditions.concat([
 			{
-				cond: from => from[this.name] && this.pattern && !new RegExp(this.pattern).test(from[this.name]),
+				cond: from => from[this.name] && this.pattern !== null && !new RegExp(this.pattern).test(from[this.name]),
 				err: `Parameter ${this.displayName} passt nicht auf das geforderte Muster.`,
 			},
 		]);
@@ -135,16 +135,16 @@ export class SelectParameter extends RequirableParameter {
 }
 export class NumberParameter extends RequirableParameter {
 	@Allow()
-	@Transform(({ value }) => (value ? Number(value) : undefined))
-	min?: number;
+	@Transform(({ value }) => (value ? Number(value) : null))
+	min: number = null;
 
 	@Allow()
-	@Transform(({ value }) => (value ? Number(value) : undefined))
-	max?: number;
+	@Transform(({ value }) => (value ? Number(value) : null))
+	max: number = null;
 
 	@Allow()
-	@Transform(({ value }) => (value ? Number(value) : undefined))
-	step?: number;
+	@Transform(({ value }) => (value ? Number(value) : null))
+	step: number = null;
 
 	constructor(p: Partial<NumberParameter>) {
 		super(p);

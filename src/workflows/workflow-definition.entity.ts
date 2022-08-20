@@ -34,6 +34,10 @@ export class WorkflowDefinition<S = any> extends BaseEntity {
 	@IsString()
 	name: string;
 
+	get sanitizedName(): string {
+		return this.name.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase();
+	}
+
 	@Column()
 	@IsString()
 	description: string;
@@ -54,7 +58,7 @@ export class WorkflowDefinition<S = any> extends BaseEntity {
 
 	@Column({
 		generatedType: 'STORED',
-		asExpression: `"parameterFields" != ('[]')::jsonb`,
+		asExpression: `jsonb_array_length("parameterFields") > 0`,
 	})
 	readonly hasParams: boolean;
 
@@ -91,7 +95,7 @@ export class KubernetesWorkflowDefinition extends WorkflowDefinition<K8sJobServi
 	@IsString()
 	image: string;
 
-	@Column({ type: 'json' })
+	@Column({ type: 'jsonb' })
 	@IsArray()
 	@IsString({ each: true })
 	command: string[];

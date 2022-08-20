@@ -11,11 +11,11 @@ import {
 	TableInheritance,
 } from 'typeorm';
 import { K8sJobService } from '../kubernetes/k8s-job.service';
-import { Observable } from 'rxjs';
 import { SetParameter } from '../workflows/parameter.entity';
 import { JsonColumn } from 'src/util/json-column.decorator';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
+import { LogStreamer } from 'src/workflow-logging/LogStreamer';
 
 @Entity()
 @TableInheritance({ column: { type: 'varchar', name: 'kind' } })
@@ -62,12 +62,12 @@ export class WorkflowRun extends BaseEntity {
 	})
 	readonly status: 'prepared' | 'running' | 'finished' | 'failed';
 
-	start(_svc: any) {
+	start(_svc: unknown) {
 		this.startedAt = new Date();
 		return this.save();
 	}
 
-	streamLog(_: any) {
+	streamLog(_: unknown): LogStreamer {
 		throw new Error('Cannot get logs from abstract WorkflowRun.');
 	}
 
@@ -78,7 +78,7 @@ export class WorkflowRun extends BaseEntity {
 	}
 
 	get jobTag() {
-		return `${this.workflowDefinition.name}-${this.id}`;
+		return `${this.workflowDefinition.sanitizedName}-${this.id}`;
 	}
 }
 
@@ -96,7 +96,7 @@ export class KubernetesWorkflowRun extends WorkflowRun {
 		return super.start(jobService);
 	}
 
-	override async streamLog(svc: K8sJobService): Promise<Observable<string>> {
+	override streamLog(svc: K8sJobService): LogStreamer {
 		return svc.getLogStream(this);
 	}
 }

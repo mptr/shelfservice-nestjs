@@ -4,6 +4,7 @@ import { WorkflowDefinition } from '../workflows/workflow-definition.entity';
 import { K8sJobService } from '../kubernetes/k8s-job.service';
 import { WorkflowRun } from './workflow-run.entity';
 import { ApiBody } from '@nestjs/swagger';
+import { LogStreamer } from 'src/workflow-logging/LogStreamer';
 
 @Controller('/workflows/:wfid/runs')
 @Public()
@@ -41,7 +42,9 @@ export class WorkflowRunsController {
 		const wfr = await WorkflowRun.findOneOrFail({
 			where: { id, workflowDefinition: { id: wfId } },
 		});
-		if (wfr.status !== 'running') return null;
-		return wfr.streamLog(this.k8sService);
+
+		if (['finished', 'failed'].includes(wfr.status)) return new LogStreamer((await wfr.log).data);
+
+		return wfr.streamLog(this.k8sService).stream;
 	}
 }

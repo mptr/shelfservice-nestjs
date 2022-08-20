@@ -2,8 +2,10 @@ import { Injectable } from '@nestjs/common';
 import * as k8s from '@kubernetes/client-node';
 import { Observable } from 'rxjs';
 import { K8sConfigService } from 'src/config/k8s-config/k8s-config.service';
-import { V1Job, V1Pod } from '@kubernetes/client-node';
+import { V1Job } from '@kubernetes/client-node';
 import { KubernetesWorkflowRun } from 'src/workflow-runs/workflow-run.entity';
+import { LogChunker } from './LogChunker';
+import { LogStreamer } from 'src/workflow-logging/LogStreamer';
 
 @Injectable()
 export class K8sJobService {
@@ -26,7 +28,7 @@ export class K8sJobService {
 				kind: 'Job',
 				metadata: {
 					name: run.jobTag,
-					annotations: { jobName: run.workflowDefinition.name, jobId: run.id },
+					annotations: { jobName: run.workflowDefinition.sanitizedName, jobId: run.id },
 				},
 				spec: {
 					template: {
@@ -57,15 +59,13 @@ export class K8sJobService {
 		return body.status;
 	}
 
-	async getLog(run: KubernetesWorkflowRun, latestOnly = false): Promise<string> {
-		const pod = await this.getPodForWfRun(run);
-		return this.getPodLogs({ podName: pod.metadata.name, latestOnly });
+	async getLogOnce(run: KubernetesWorkflowRun): Promise<string> {
+		return new LogChunker(this.coreApi, this.k8sConf.namespace, run).getLatest();
 	}
 
-	async getLogStream(run: KubernetesWorkflowRun): Promise<Observable<string>> {
-		return new Observable<string>(subscriber => {
+	getLogStream(run: KubernetesWorkflowRun): LogStreamer {
+		const o = new Observable<string>(subscriber => {
 			let loopTimeout: NodeJS.Timeout; // loop timer
-			let prevLogLen = 0; // length of previous emitted log
 
 			const cancel = () => {
 				// teardown
@@ -73,54 +73,27 @@ export class K8sJobService {
 				subscriber.unsubscribe();
 			};
 
+			const logChunker = new LogChunker(this.coreApi, this.k8sConf.namespace, run);
+
 			// loop function
-			const refresh = async (latestOnly: boolean) => {
+			const refresh = async () => {
 				const status = await this.getStatus(run); // get status to determine if job is done
 
-				const logs = await this.getLog(run, latestOnly); // get logs
+				subscriber.next(await logChunker.getLatest()); // emit only new section of log
 
-				subscriber.next(logs.substring(prevLogLen)); // emit only new section of log
-				prevLogLen = logs.length; // update prevLogLen
-
-				if (status.active) loopTimeout = setTimeout(() => refresh(true), 500); // re-run this function after 500ms
+				if (status.active) loopTimeout = setTimeout(() => refresh(), 500); // re-run this function after 500ms
 				else {
 					subscriber.complete();
 					cancel();
 				}
 			};
-			refresh(false); // initial fetch
+			refresh(); // initial fetch
 			return cancel; // teardown function
 		});
+		return new LogStreamer(o);
 	}
 
 	async deleteJob(j: V1Job) {
 		await this.batchApi.deleteNamespacedJob(j.metadata.name, this.k8sConf.namespace);
-	}
-
-	private async getPodForWfRun(wfRun: KubernetesWorkflowRun): Promise<V1Pod> {
-		const pods = await this.coreApi.listNamespacedPod(
-			this.k8sConf.namespace,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			`job-name=${wfRun.jobTag}`,
-		);
-		return pods.body.items[0];
-	}
-
-	private async getPodLogs(p: { podName: string; latestOnly: boolean }): Promise<string> {
-		const logs = await this.coreApi.readNamespacedPodLog(
-			p.podName,
-			this.k8sConf.namespace,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			// p.latestOnly ? 2 : undefined, // grab only last 2 seconds of logs if flag is set // TODO
-		);
-		return logs.body;
 	}
 }

@@ -28,7 +28,7 @@ export class WorkflowsController {
 	@Get()
 	findAll() {
 		return WorkflowDefinition.find({
-			select: ['id', 'name', 'icon', 'hasParams', 'owners'],
+			select: ['id', 'kind', 'name', 'icon', 'hasParams', 'owners', 'description'],
 			// relations: {
 			// 	owners: {
 			// 		id: true,

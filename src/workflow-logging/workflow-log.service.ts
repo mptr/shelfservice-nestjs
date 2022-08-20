@@ -9,8 +9,8 @@ export class WorkflowLogService {
 	// every 10 seconds
 	// @Cron('*/10 * * * * *')
 	async collectLogs() {
-		console.log('collecting logs');
 		const js = await this.k8sService.getAllJobs();
+		console.log('collecting logs', js.length);
 		js.forEach(j => {
 			if (j.status.active) this.processActive(j);
 			else this.processInactive(j);
@@ -22,12 +22,14 @@ export class WorkflowLogService {
 
 		// get the workflow run
 		const wfRun = await KubernetesWorkflowRun.findOne({
-			where: { id: j.metadata.annotations.jobId, workflowDefinition: { name: j.metadata.annotations.jobName } },
+			where: { id: j.metadata.annotations.jobId },
 		});
 		if (!wfRun) return console.warn("can't find workflow run for job:", j.metadata.name);
 
+		if (wfRun.result !== null) return; // do nothing if workflow run has already been marked as finished
+
 		// store logs in the database
-		await wfRun.archive(!j.status.failed, await this.k8sService.getLog(wfRun));
+		await wfRun.archive(!j.status.failed, await this.k8sService.getLogOnce(wfRun));
 
 		// delete the job
 		await this.k8sService.deleteJob(j);
