@@ -1,6 +1,7 @@
 import { WorkflowDefinition } from 'src/workflows/workflow-definition.entity';
 import { WorkflowRun } from 'src/workflow-runs/workflow-run.entity';
 import { BaseEntity, Column, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { JWToken } from 'src/util/requester.decorator';
 
 @Entity()
 export class User extends BaseEntity {
@@ -11,19 +12,22 @@ export class User extends BaseEntity {
 	email: string;
 
 	@Column()
-	firstName: string;
+	preferred_username: string;
 
 	@Column()
-	lastName: string;
+	given_name: string;
+
+	@Column()
+	family_name: string;
 
 	@ManyToMany(() => WorkflowDefinition, wf => wf.owners)
-	workflows: Promise<WorkflowDefinition[]>;
+	workflows: WorkflowDefinition[];
 
 	@OneToMany(() => WorkflowRun, wfrun => wfrun.ranBy)
-	workflowRuns: Promise<WorkflowRun[]>;
+	workflowRuns: WorkflowRun[];
 
-	constructor(p?: Omit<User, 'id'>) {
+	constructor(tok?: JWToken) {
 		super();
-		if (p) Object.assign(this, p);
+		if (tok) Object.assign(this, tok);
 	}
 }

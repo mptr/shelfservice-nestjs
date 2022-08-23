@@ -17,7 +17,7 @@ export class KeycloakConfigService implements KeycloakConnectOptionsFactory {
 			clientId: KC_CLIENT_ID,
 			secret: undefined as any,
 			'bearer-only': true,
-			useNestLogger: true,
+			useNestLogger: false,
 			'ssl-required': 'all',
 			policyEnforcement: PolicyEnforcementMode.PERMISSIVE,
 			tokenValidation: TokenValidation.OFFLINE,

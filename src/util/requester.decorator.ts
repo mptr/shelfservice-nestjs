@@ -2,22 +2,28 @@ import {
 	ArgumentMetadata,
 	createParamDecorator,
 	ExecutionContext,
+	forwardRef,
 	HttpException,
 	HttpStatus,
+	Inject,
 	Injectable,
 	PipeTransform,
 	Type,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { plainToInstance } from 'class-transformer';
+import { IsEmail, IsString } from 'class-validator';
 import { User } from 'src/users/user.entity';
 import { Repository } from 'typeorm';
 
-export interface JWToken {
-	email_verified: boolean;
-	name: string;
+export class JWToken {
+	@IsString()
 	preferred_username: string;
+	@IsString()
 	given_name: string;
+	@IsString()
 	family_name: string;
+	@IsEmail()
 	email: string;
 }
 interface ArgMetadata<T> extends ArgumentMetadata {
@@ -30,22 +36,21 @@ interface ArgMetadata<T> extends ArgumentMetadata {
 @Injectable()
 export class JwtUserPipe implements PipeTransform<JWToken, Promise<User>> {
 	constructor(
-		@InjectRepository(User)
-		protected userRepo: Repository<User>,
+		@Inject(forwardRef(() => getRepositoryToken(User)))
+		private readonly userRepo: Repository<User>,
 	) {}
 
 	async transform(jwt: any, metadata: ArgMetadata<User>): Promise<User> {
-		/* istanbul ignore next */ // this should never happen (only on bad decorator usage)
-		if (!metadata.metatype) throw new Error('No metatype supplied');
+		// this should never happen (only on bad decorator usage)
+		if (!metadata.metatype) throw new Error('Kein Metatype angegeben');
+
 		const u = await this.userRepo.findOne({
-			where: {
-				email: jwt.email,
-			},
+			where: { preferred_username: jwt.preferred_username },
 		});
 		// throw if no entity (of kind `metatype`) found
 		if (!u)
 			throw new HttpException(
-				'Requester ' + jwt.email + ' is not a registered ' + metadata.metatype.name,
+				'Requester ' + jwt.preferred_username + ' ist kein registrierter ' + metadata.metatype.name,
 				HttpStatus.FORBIDDEN,
 			);
 		return u;
@@ -56,12 +61,14 @@ export class JwtUserPipe implements PipeTransform<JWToken, Promise<User>> {
  * Pipe to validate jwt
  */
 @Injectable()
-export class JwtPipe implements PipeTransform {
+export class JwtPipe implements PipeTransform<any, JWToken> {
 	transform(jwt?: any) {
-		// check if the email is present in the jwt
-		if (!jwt || !jwt.email || !jwt.given_name || !jwt.family_name)
-			throw new HttpException('Token lacks email, given_name or family_name', HttpStatus.UNAUTHORIZED);
-		return jwt;
+		try {
+			const jwtInstance = plainToInstance(JWToken, jwt);
+			return jwtInstance;
+		} catch (e) {
+			throw new HttpException(JSON.stringify(e), HttpStatus.UNAUTHORIZED);
+		}
 	}
 }
 

@@ -1,21 +1,28 @@
-import { Controller, Get, Post, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Param, Delete, Put, HttpException, HttpStatus } from '@nestjs/common';
 import { User } from './user.entity';
-import { Requester } from 'src/util/requester.decorator';
-import { ApiTags } from '@nestjs/swagger';
-import { Public } from 'nest-keycloak-connect';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { JWToken, Requester, RequesterJwt } from 'src/util/requester.decorator';
 
 @Controller('users')
 @ApiTags('users')
-@Public()
+@ApiBearerAuth('kc-token')
 export class UsersController {
-	@Post()
-	create(@Requester() requester: User) {
-		return requester.save();
+	@Put(':username')
+	create(@RequesterJwt() requester: JWToken, @Param('username') username: string) {
+		if (requester.preferred_username !== username)
+			throw new HttpException('You can only create your own user', HttpStatus.FORBIDDEN);
+		const u = new User(requester);
+		return u.save();
 	}
 
 	@Get()
 	findAll() {
 		return User.find();
+	}
+
+	@Get('self')
+	findSelf(@Requester() requester: User) {
+		return this.findOne(requester.id);
 	}
 
 	@Get(':id')

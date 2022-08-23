@@ -1,49 +1,56 @@
 import { Controller, Get, Post, Body, Param, Redirect, Sse } from '@nestjs/common';
-import { Public } from 'nest-keycloak-connect';
 import { WorkflowDefinition } from '../workflows/workflow-definition.entity';
 import { K8sJobService } from '../kubernetes/k8s-job.service';
 import { WorkflowRun } from './workflow-run.entity';
-import { ApiBody } from '@nestjs/swagger';
-import { LogStreamer } from 'src/workflow-logging/LogStreamer';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { Requester } from 'src/util/requester.decorator';
+import { User } from 'src/users/user.entity';
 
 @Controller('/workflows/:wfid/runs')
-@Public()
+@ApiTags('workflow-runs')
+@ApiBearerAuth('kc-token')
 export class WorkflowRunsController {
+	static accessPermission(user: User, defId: string, runId?: string) {
+		return [
+			{ id: runId, workflowDefinition: { id: defId, owners: { id: user.id } } },
+			{ id: runId, workflowDefinition: { id: defId }, ranBy: { id: user.id } },
+		];
+	}
+
 	constructor(protected readonly k8sService: K8sJobService) {}
 
 	@Post()
 	@Redirect()
 	@ApiBody({ type: Object })
-	async create(@Param('wfid') wfId: string, @Body() parameters: Record<string, string>) {
+	async create(@Requester() user: User, @Param('wfid') wfId: string, @Body() parameters: Record<string, string>) {
 		const wf = await WorkflowDefinition.findOneOrFail({ where: { id: wfId } });
-		const wfr = await wf.run(null, parameters, this.k8sService);
+		const wfr = await wf.run(user, parameters, this.k8sService);
 		return { url: `runs/${wfr.id}` };
 	}
 
 	@Get()
-	findAll(@Param('wfid') wfId: string) {
-		return WorkflowRun.find({
-			where: { workflowDefinition: { id: wfId } },
+	async findAll(@Requester() user: User, @Param('wfid') wfId: string) {
+		const r = await WorkflowRun.find({
+			where: WorkflowRunsController.accessPermission(user, wfId),
 			relations: { ranBy: true },
-			select: ['id', 'ranBy', 'status', 'startedAt'],
 		});
+		return r;
 	}
 
 	@Get(':id')
-	findOne(@Param('wfid') wfId: string, @Param('id') id: string) {
+	findOne(@Requester() user: User, @Param('wfid') wfId: string, @Param('id') id: string) {
 		return WorkflowRun.findOneOrFail({
-			where: { id, workflowDefinition: { id: wfId } },
-			relations: { workflowDefinition: true },
+			where: WorkflowRunsController.accessPermission(user, wfId, id),
+			relations: { workflowDefinition: { owners: true }, ranBy: true },
 		});
 	}
 
 	@Sse(':id/log')
-	async streamLog(@Param('wfid') wfId: string, @Param('id') id: string) {
+	async streamLog(@Requester() user: User, @Param('wfid') wfId: string, @Param('id') id: string) {
 		const wfr = await WorkflowRun.findOneOrFail({
-			where: { id, workflowDefinition: { id: wfId } },
+			where: WorkflowRunsController.accessPermission(user, wfId, id),
+			relations: { workflowDefinition: true, log: true },
 		});
-
-		if (['finished', 'failed'].includes(wfr.status)) return new LogStreamer((await wfr.log).data);
 
 		return wfr.streamLog(this.k8sService).stream;
 	}

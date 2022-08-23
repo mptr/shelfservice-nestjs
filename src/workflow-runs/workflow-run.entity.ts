@@ -5,6 +5,7 @@ import {
 	ChildEntity,
 	Column,
 	Entity,
+	JoinColumn,
 	ManyToOne,
 	OneToOne,
 	PrimaryGeneratedColumn,
@@ -16,6 +17,7 @@ import { JsonColumn } from 'src/util/json-column.decorator';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 import { LogStreamer } from 'src/workflow-logging/LogStreamer';
+import { WorkflowRunLog } from './workflow-run-log.entity';
 
 @Entity()
 @TableInheritance({ column: { type: 'varchar', name: 'kind' } })
@@ -23,7 +25,7 @@ export class WorkflowRun extends BaseEntity {
 	constructor(wfDef?: WorkflowDefinition, u?: User, parameters?: SetParameter[]) {
 		super();
 		if (wfDef) this.workflowDefinition = wfDef;
-		if (u) this.ranBy = Promise.resolve(u); // TODO: remove checks
+		if (u) this.ranBy = u; // TODO: remove checks
 		if (parameters) this.parameters = parameters;
 	}
 
@@ -31,12 +33,15 @@ export class WorkflowRun extends BaseEntity {
 	readonly id: string;
 
 	@ManyToOne(() => User, user => user.workflowRuns)
-	ranBy: Promise<User>;
+	ranBy: User;
 
 	workflowDefinition: WorkflowDefinition;
 
 	@Column({ nullable: true })
 	startedAt: Date;
+
+	@Column({ nullable: true })
+	finishedAt: Date;
 
 	@JsonColumn({ type: SetParameter, array: true, update: false })
 	@Type(() => SetParameter)
@@ -44,7 +49,8 @@ export class WorkflowRun extends BaseEntity {
 	parameters: SetParameter[];
 
 	@OneToOne(() => WorkflowRunLog, log => log.run)
-	log: Promise<WorkflowRunLog>;
+	@JoinColumn()
+	log: WorkflowRunLog;
 
 	@Column({ nullable: true })
 	result: boolean;
@@ -60,7 +66,7 @@ export class WorkflowRun extends BaseEntity {
 			END
 		)`,
 	})
-	readonly status: 'prepared' | 'running' | 'finished' | 'failed';
+	readonly status: 'prepared' | 'running' | 'success' | 'failure';
 
 	start(_svc: unknown) {
 		this.startedAt = new Date();
@@ -68,17 +74,24 @@ export class WorkflowRun extends BaseEntity {
 	}
 
 	streamLog(_: unknown): LogStreamer {
+		if (this.log) return new LogStreamer(this.log.data, this.logBlacklist);
 		throw new Error('Cannot get logs from abstract WorkflowRun.');
 	}
 
 	async archive(result: boolean, logs: string) {
 		this.result = result;
-		this.log = Promise.resolve(new WorkflowRunLog(this, logs));
+		this.log = new WorkflowRunLog(this, logs);
+		this.finishedAt = new Date();
 		await this.save();
+		await this.log.save();
 	}
 
 	get jobTag() {
 		return `${this.workflowDefinition.sanitizedName}-${this.id}`;
+	}
+
+	protected get logBlacklist(): string[] {
+		return this.parameters.filter(p => p.hide).map(p => p.value);
 	}
 }
 
@@ -88,7 +101,7 @@ export class KubernetesWorkflowRun extends WorkflowRun {
 		super(wfDef, u, parameters);
 	}
 
-	@ManyToOne(() => KubernetesWorkflowDefinition, wdef => wdef.runs, { nullable: false, eager: true })
+	@ManyToOne(() => KubernetesWorkflowDefinition, wdef => wdef.runs, { nullable: false })
 	override workflowDefinition: KubernetesWorkflowDefinition;
 
 	override async start(jobService: K8sJobService) {
@@ -97,7 +110,8 @@ export class KubernetesWorkflowRun extends WorkflowRun {
 	}
 
 	override streamLog(svc: K8sJobService): LogStreamer {
-		return svc.getLogStream(this);
+		if (this.log) return super.streamLog(svc);
+		return new LogStreamer(svc.getLogStream(this), this.logBlacklist);
 	}
 }
 
@@ -106,21 +120,3 @@ export class KubernetesWorkflowRun extends WorkflowRun {
 // 	@ManyToOne(() => WebWorkerWorkflowDefinition, wdef => wdef.runs)
 // 	override workflowDefinition: WebWorkerWorkflowDefinition;
 // }
-
-@Entity()
-export class WorkflowRunLog extends BaseEntity {
-	constructor(run?: WorkflowRun, data?: string) {
-		super();
-		if (run) this.run = run;
-		if (data) this.data = data;
-	}
-
-	@PrimaryGeneratedColumn()
-	id: number;
-
-	@OneToOne(() => WorkflowRun, run => run.log, { eager: true, nullable: false })
-	run: WorkflowRun;
-
-	@Column({ update: false })
-	data: string;
-}

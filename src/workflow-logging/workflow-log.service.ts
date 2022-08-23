@@ -1,5 +1,6 @@
 import { V1Job } from '@kubernetes/client-node';
 import { Injectable } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { KubernetesWorkflowRun } from 'src/workflow-runs/workflow-run.entity';
 import { K8sJobService } from '../kubernetes/k8s-job.service';
 
@@ -7,7 +8,7 @@ import { K8sJobService } from '../kubernetes/k8s-job.service';
 export class WorkflowLogService {
 	constructor(protected readonly k8sService: K8sJobService) {}
 	// every 10 seconds
-	// @Cron('*/10 * * * * *')
+	@Cron('*/10 * * * * *')
 	async collectLogs() {
 		const js = await this.k8sService.getAllJobs();
 		console.log('collecting logs', js.length);
@@ -17,12 +18,15 @@ export class WorkflowLogService {
 		});
 	}
 
-	protected async processInactive(j: V1Job) {
+	async processInactive(j: V1Job) {
+		if (j.status.active) return;
+
 		console.log('cleaning up job:', j.metadata.name);
 
 		// get the workflow run
 		const wfRun = await KubernetesWorkflowRun.findOne({
 			where: { id: j.metadata.annotations.jobId },
+			relations: { workflowDefinition: true },
 		});
 		if (!wfRun) return console.warn("can't find workflow run for job:", j.metadata.name);
 
@@ -33,10 +37,9 @@ export class WorkflowLogService {
 
 		// delete the job
 		await this.k8sService.deleteJob(j);
-		console.log('done');
 	}
 
-	protected async processActive(j: V1Job) {
+	async processActive(j: V1Job) {
 		const JOB_CANCEL_TIMEOUT = 10 * 60 * 1000;
 		if (j.status.startTime.getTime() + JOB_CANCEL_TIMEOUT >= new Date().getTime())
 			return console.log(j.metadata.name, 'is still running'); // do nothing if job is younger than JOB_CANCEL_TIMEOUT

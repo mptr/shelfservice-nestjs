@@ -6,6 +6,7 @@ import {
 	CreateDateColumn,
 	DeleteDateColumn,
 	Entity,
+	JoinTable,
 	ManyToMany,
 	OneToMany,
 	PrimaryGeneratedColumn,
@@ -34,9 +35,15 @@ export class WorkflowDefinition<S = any> extends BaseEntity {
 	@IsString()
 	name: string;
 
-	get sanitizedName(): string {
-		return this.name.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase();
-	}
+	@Column({
+		generatedType: 'STORED',
+		asExpression: `regexp_replace("name", '[^a-zA-Z0-9-]', '-', 'g')`,
+	})
+	readonly sanitizedName: string;
+
+	// get sanitizedName(): string {
+	// 	return this.name.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase();
+	// }
 
 	@Column()
 	@IsString()
@@ -62,7 +69,7 @@ export class WorkflowDefinition<S = any> extends BaseEntity {
 	})
 	readonly hasParams: boolean;
 
-	runs: Promise<WorkflowRun[]>;
+	runs: WorkflowRun[];
 
 	@JsonColumn({
 		type: Parameter,
@@ -77,7 +84,8 @@ export class WorkflowDefinition<S = any> extends BaseEntity {
 	parameterFields: Parameter[];
 
 	@ManyToMany(() => User, user => user.workflows)
-	owners: Promise<User[]>;
+	@JoinTable()
+	owners: User[];
 
 	async run(u: User, inps: Record<string, string>, svc: S): Promise<WorkflowRun> {
 		const setParams = this.parameterFields.map(p => p.accept(inps));
@@ -101,7 +109,7 @@ export class KubernetesWorkflowDefinition extends WorkflowDefinition<K8sJobServi
 	command: string[];
 
 	@OneToMany(() => KubernetesWorkflowRun, wfrun => wfrun.workflowDefinition)
-	override runs: Promise<KubernetesWorkflowRun[]>;
+	override runs: KubernetesWorkflowRun[];
 
 	protected override async dispatch(
 		u: User,

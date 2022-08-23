@@ -34,7 +34,6 @@ type ParamValidator = {
 	cond: (from: Record<string, string>) => boolean;
 	err: string;
 };
-
 export class Parameter {
 	static get discriminator(): Discriminator<Parameter, 'kind'> {
 		return {
@@ -78,10 +77,9 @@ export class Parameter {
 		this.acceptConditions.forEach(({ cond, err }) => {
 			if (cond(from)) throw new HttpException(err, HttpStatus.UNPROCESSABLE_ENTITY);
 		});
-		return { ...this, value: from[this.name] };
+		return new SetParameter(from[this.name], this);
 	}
 }
-
 export class RequirableParameter extends Parameter {
 	@IsBoolean()
 	@IsOptional()
@@ -91,6 +89,10 @@ export class RequirableParameter extends Parameter {
 	@IsOptional()
 	hint: string = null;
 
+	@IsBoolean()
+	@IsOptional()
+	hide = false;
+
 	override get acceptConditions(): ParamValidator[] {
 		return super.acceptConditions.concat([
 			{
@@ -99,8 +101,13 @@ export class RequirableParameter extends Parameter {
 			},
 		]);
 	}
-}
 
+	override accept(from: Record<string, string>): SetParameter {
+		const r = super.accept(from);
+		r.hide = this.hide;
+		return r;
+	}
+}
 export class StringParameter extends RequirableParameter {
 	@IsString()
 	@IsOptional()
@@ -112,6 +119,11 @@ export class StringParameter extends RequirableParameter {
 
 	@IsBoolean()
 	multiline = false;
+
+	@IsBoolean()
+	@IsOptional()
+	password = false;
+
 	constructor(p: Partial<StringParameter>) {
 		super(p);
 	}
@@ -179,5 +191,11 @@ export class DateParameter extends RequirableParameter {
 }
 
 export class SetParameter extends Parameter implements V1EnvVar {
+	hide = false;
 	value: string;
+
+	constructor(v: string, p: Parameter) {
+		super(p);
+		this.value = v;
+	}
 }

@@ -1,26 +1,30 @@
-import { Controller, Get, Post, Body, Param, Delete, Redirect } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Redirect, HttpException, HttpStatus } from '@nestjs/common';
 import { KubernetesWorkflowDefinition, WorkflowDefinition } from './workflow-definition.entity';
-import { ApiTags } from '@nestjs/swagger';
-
-import { Public } from 'nest-keycloak-connect';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Requester } from 'src/util/requester.decorator';
+import { User } from 'src/users/user.entity';
 
 @Controller('workflows')
 @ApiTags('workflows')
-@Public()
+@ApiBearerAuth('kc-token')
 export class WorkflowsController {
+	static accessPermission(user: User, defId?: string) {
+		return [{ id: defId, owners: { id: user.id } }];
+	}
+
 	@Post('kubernetes')
 	@Redirect()
-	createKubernetes(@Body() wfDef: KubernetesWorkflowDefinition) {
-		return this.create(wfDef);
+	createKubernetes(@Requester() user: User, @Body() wfDef: KubernetesWorkflowDefinition) {
+		return this.create(user, wfDef);
 	}
 	// @Post('webworker')
 	// createWebworker(@Body() wfDef: WebWorkerWorkflowDefinition) {
 	// 	return wfDef.save();
 	// }
 
-	protected async create(wfDef: WorkflowDefinition) {
-		console.log('new workflow');
-		console.log(wfDef);
+	protected async create(user: User, wfDef: WorkflowDefinition) {
+		if (!wfDef.owners) wfDef.owners = [];
+		wfDef.owners.push(user);
 		wfDef = await wfDef.save();
 		return { url: wfDef.id };
 	}
@@ -28,31 +32,21 @@ export class WorkflowsController {
 	@Get()
 	findAll() {
 		return WorkflowDefinition.find({
-			select: ['id', 'kind', 'name', 'icon', 'hasParams', 'owners', 'description'],
-			// relations: {
-			// 	owners: {
-			// 		id: true,
-			// 		firstName: true,
-			// 		lastName: true,
-			// 	},
-			// },
+			select: ['id', 'kind', 'name', 'icon', 'hasParams', 'description'],
+			relations: { owners: true },
 		});
 	}
 
 	@Get(':id')
 	findOne(@Param('id') id: string) {
-		return WorkflowDefinition.findOne({ where: { id } });
+		return WorkflowDefinition.findOne({ where: { id }, relations: { owners: true } });
 	}
 
-	// @Patch(':id')
-	// async update(@Param('id') id: string, @Body() updateWorkflowDto: UpdateAnyWorkflowDefinitionDto) {
-	// 	const wf = await WorkflowDefinition.findOne({ where: { id } });
-	// 	//
-	// 	return wf.save();
-	// }
-
 	@Delete(':id')
-	async remove(@Param('id') id: string) {
-		return WorkflowDefinition.softRemove(await this.findOne(id));
+	async remove(@Requester() user: User, @Param('id') id: string) {
+		const r = await this.findOne(id);
+		if (!r.owners.map(o => o.id).includes(user.id))
+			throw new HttpException('You can only delete workflows owned by you', HttpStatus.FORBIDDEN);
+		return WorkflowDefinition.softRemove(r);
 	}
 }

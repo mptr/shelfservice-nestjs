@@ -1,10 +1,8 @@
 import { All, Controller, Next, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { NextFunction, Request } from 'express';
-import { Public } from 'nest-keycloak-connect';
 
 @Controller()
-@Public()
 @ApiTags('shelf-alias')
 @ApiBearerAuth('kc-token')
 export class ShelfAliasController {
