@@ -1,5 +1,9 @@
 import { User } from 'src/users/user.entity';
-import { KubernetesWorkflowDefinition, WorkflowDefinition } from 'src/workflows/workflow-definition.entity';
+import {
+	KubernetesWorkflowDefinition,
+	WebWorkerWorkflowDefinition,
+	WorkflowDefinition,
+} from 'src/workflows/workflow-definition.entity';
 import {
 	BaseEntity,
 	ChildEntity,
@@ -18,6 +22,7 @@ import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 import { LogStreamer } from 'src/workflow-logging/LogStreamer';
 import { WorkflowRunLog } from './workflow-run-log.entity';
+import { readFileSync } from 'fs';
 
 @Entity()
 @TableInheritance({ column: { type: 'varchar', name: 'kind' } })
@@ -35,6 +40,7 @@ export class WorkflowRun extends BaseEntity {
 	@ManyToOne(() => User, user => user.workflowRuns)
 	ranBy: User;
 
+	@ManyToOne(() => WorkflowDefinition, wfDef => wfDef.runs)
 	workflowDefinition: WorkflowDefinition;
 
 	@Column({ nullable: true })
@@ -115,8 +121,14 @@ export class KubernetesWorkflowRun extends WorkflowRun {
 	}
 }
 
-// @ChildEntity()
-// export class WebWorkerWorkflowRun extends WorkflowRun {
-// 	@ManyToOne(() => WebWorkerWorkflowDefinition, wdef => wdef.runs)
-// 	override workflowDefinition: WebWorkerWorkflowDefinition;
-// }
+@ChildEntity()
+export class WebWorkerWorkflowRun extends WorkflowRun {
+	@ManyToOne(() => WebWorkerWorkflowDefinition, wdef => wdef.runs)
+	override workflowDefinition: WebWorkerWorkflowDefinition;
+
+	override async start() {
+		return super.start(undefined);
+	}
+
+	static readonly webwokerExtensionScript = readFileSync(__dirname + '/webWorker-extensions.asset.js', 'utf-8');
+}

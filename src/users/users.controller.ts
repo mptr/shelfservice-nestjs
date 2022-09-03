@@ -8,11 +8,14 @@ import { JWToken, Requester, RequesterJwt } from 'src/util/requester.decorator';
 @ApiBearerAuth('kc-token')
 export class UsersController {
 	@Put(':username')
-	create(@RequesterJwt() requester: JWToken, @Param('username') username: string) {
+	async create(@RequesterJwt() requester: JWToken, @Param('username') username: string) {
 		if (requester.preferred_username !== username)
 			throw new HttpException('You can only create your own user', HttpStatus.FORBIDDEN);
-		const u = new User(requester);
-		return u.save();
+		await User.upsert(new User(requester), {
+			conflictPaths: ['preferred_username'],
+			skipUpdateIfNoValuesChanged: true,
+		});
+		return true;
 	}
 
 	@Get()

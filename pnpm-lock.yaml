@@ -23,6 +23,7 @@ specifiers:
   '@types/uuid': ^8.3.4
   '@typescript-eslint/eslint-plugin': 5.30.5
   '@typescript-eslint/parser': 5.30.5
+  axios: ^0.27.2
   class-transformer: 0.5.1
   class-validator: 0.13.2
   commitlint: 17.0.3
@@ -63,6 +64,7 @@ dependencies:
   '@nestjs/schedule': 2.1.0_hukrmcuhf2odavpe3mdd26srgi
   '@nestjs/swagger': 6.0.1_pbtujvhjpxm2vi6pjgzxvp25au
   '@nestjs/typeorm': 9.0.0_abb33aogac2ku4b7geqnl6bo6i
+  axios: 0.27.2
   class-transformer: 0.5.1
   class-validator: 0.13.2
   keycloak-connect: 18.0.2
@@ -2262,7 +2264,6 @@ packages:
     transitivePeerDependencies:
       - debug
     dev: false
-    optional: true
 
   /babel-jest/28.1.2_@babel+core@7.18.6:
     resolution: {integrity: sha512-pfmoo6sh4L/+5/G2OOfQrGJgvH7fTa1oChnuYH2G/6gA+JwDvO8PELwvwnofKBMNrQsam0Wy/Rw+QSrBNewq2Q==}
@@ -2580,8 +2581,8 @@ packages:
     resolution: {integrity: sha512-p3KULyQg4S7NIHixdwbGX+nFHkoBiA4YQmyWtjb8XngSKV124nJmRysgAeujbUVb15vh+RvFUfCPqU7rXk+hZg==}
     engines: {node: '>=6.0'}
 
-  /chromedriver/103.0.0:
-    resolution: {integrity: sha512-7BHf6HWt0PeOHCzWO8qlnD13sARzr5AKTtG8Csn+czsuAsajwPxdLNtry5GPh8HYFyl+i0M+yg3bT43AGfgU9w==}
+  /chromedriver/104.0.0:
+    resolution: {integrity: sha512-zbHZutN2ATo19xA6nXwwLn+KueD/5w8ap5m4b6bCb8MIaRFnyDwMbFoy7oFAjlSMpCFL3KSaZRiWUwjj//N3yQ==}
     engines: {node: '>=10'}
     hasBin: true
     requiresBuild: true
@@ -2832,8 +2833,8 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
     dependencies:
-      is-text-path: 1.0.1
       JSONStream: 1.3.5
+      is-text-path: 1.0.1
       lodash: 4.17.21
       meow: 8.1.2
       split2: 3.2.2
@@ -3632,7 +3633,6 @@ packages:
       debug:
         optional: true
     dev: false
-    optional: true
 
   /forever-agent/0.6.1:
     resolution: {integrity: sha512-j0KLYPhm6zeac4lz3oJ3o65qvgQCcPubiyotZrXqEaG4hNagNYO8qdlUrX5vwqv9ohqeT/Z3j6+yW067yWWdUw==}
@@ -4875,7 +4875,7 @@ packages:
     dependencies:
       jwk-to-pem: 2.0.5
     optionalDependencies:
-      chromedriver: 103.0.0
+      chromedriver: 104.0.0
     transitivePeerDependencies:
       - debug
       - supports-color

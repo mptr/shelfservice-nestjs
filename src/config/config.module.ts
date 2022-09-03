@@ -3,6 +3,7 @@ import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import { K8sConfigService } from './k8s-config/k8s-config.service';
 import { KeycloakConfigService } from './keycloak-config/keycloak-config.service';
 import { TypeormConfigService } from './typeorm-config/typeorm-config.service';
+import { ConfigController } from './config.controller';
 
 const services = [KeycloakConfigService, TypeormConfigService, K8sConfigService];
 
@@ -15,6 +16,7 @@ const services = [KeycloakConfigService, TypeormConfigService, K8sConfigService]
 			envFilePath: '.env',
 		}),
 	],
+	controllers: [ConfigController],
 	providers: services,
 	exports: services,
 })
