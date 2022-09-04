@@ -20,56 +20,66 @@ export class K8sJobService {
 		this.coreApi = k8sConf.makeApiClient(k8s.CoreV1Api);
 	}
 
+	static intercept<T>(promise: Promise<T>): Promise<T> {
+		return promise.catch(error => {
+			throw new Error(error.body.message);
+		});
+	}
+
 	async getAllJobs() {
-		const { body } = await this.batchApi.listNamespacedJob(this.k8sConf.namespace);
+		const { body } = await K8sJobService.intercept(this.batchApi.listNamespacedJob(this.k8sConf.namespace));
 		return body.items;
 	}
 
 	protected async getJobByName(name: string) {
-		const { body } = await this.batchApi.readNamespacedJob(name, this.k8sConf.namespace);
+		const { body } = await K8sJobService.intercept(this.batchApi.readNamespacedJob(name, this.k8sConf.namespace));
 		return body;
 	}
 
 	async apply(run: KubernetesWorkflowRun) {
-		const { body } = await this.batchApi.createNamespacedJob(this.k8sConf.namespace, {
-			apiVersion: 'batch/v1',
-			kind: 'Job',
-			metadata: {
-				name: run.jobTag,
-				annotations: { jobName: run.workflowDefinition.sanitizedName, jobId: run.id },
-			},
-			spec: {
-				template: {
-					spec: {
-						containers: [
-							{
-								image: run.workflowDefinition.image,
-								name: run.jobTag,
-								env: run.parameters,
-								command: run.workflowDefinition.command,
-							},
-						],
-						restartPolicy: 'Never',
-					},
+		const { body } = await K8sJobService.intercept(
+			this.batchApi.createNamespacedJob(this.k8sConf.namespace, {
+				apiVersion: 'batch/v1',
+				kind: 'Job',
+				metadata: {
+					name: run.jobTag,
+					annotations: { jobName: run.workflowDefinition.sanitizedName, jobId: run.id },
 				},
-				backoffLimit: 0,
-			},
-		});
+				spec: {
+					template: {
+						spec: {
+							containers: [
+								{
+									image: run.workflowDefinition.image,
+									name: run.jobTag,
+									env: run.parameters,
+									command: run.workflowDefinition.command,
+								},
+							],
+							restartPolicy: 'Never',
+						},
+					},
+					backoffLimit: 0,
+				},
+			}),
+		);
 		return body;
 	}
 
 	protected async getStatus(run: KubernetesWorkflowRun) {
-		const { body } = await this.batchApi.readNamespacedJobStatus(run.jobTag, this.k8sConf.namespace);
+		const { body } = await K8sJobService.intercept(
+			this.batchApi.readNamespacedJobStatus(run.jobTag, this.k8sConf.namespace),
+		);
 		return body.status;
 	}
 
 	async getLogOnce(run: KubernetesWorkflowRun): Promise<string> {
-		return new LogChunker(this.coreApi, this.k8sConf.namespace, run).getLatest();
+		return new LogChunker(this, run).getLatest();
 	}
 
 	getLogStream(run: KubernetesWorkflowRun): Observable<string> {
 		// wrapper to fetch latest logs from k8s in a window-loke manner
-		const logChunker = new LogChunker(this.coreApi, this.k8sConf.namespace, run);
+		const logChunker = new LogChunker(this, run);
 
 		// signal to emit if job is no longer active and the stream should be closed
 		const stopSignal = new Subject<void>();
@@ -94,5 +104,35 @@ export class K8sJobService {
 
 	async deleteJob(j: V1Job) {
 		await this.batchApi.deleteNamespacedJob(j.metadata.name, this.k8sConf.namespace);
+	}
+
+	async getPodByName(name: string): Promise<k8s.V1Pod> {
+		const { body } = await K8sJobService.intercept(
+			this.coreApi.listNamespacedPod(
+				this.k8sConf.namespace,
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				`job-name=${name}`,
+			),
+		);
+		return body.items[0];
+	}
+
+	async getLogs(pod: k8s.V1Pod, sinceSeconds?: number) {
+		return K8sJobService.intercept(
+			this.coreApi.readNamespacedPodLog(
+				pod.metadata.name,
+				this.k8sConf.namespace,
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				sinceSeconds,
+			),
+		).then(x => x.body || '');
 	}
 }

@@ -67,13 +67,20 @@ export class WorkflowRunsController {
 			},
 			relationLoadStrategy: 'query',
 		});
-		console.log(r);
 		return r;
 	}
 
 	@Sse(':id/log')
 	async streamLog(@Requester() user: User, @Param('wfid') wfId: string, @Param('id') id: string) {
-		const wfr = await this.findOne(user, wfId, id);
+		const wfr = await WorkflowRun.findOneOrFail({
+			where: WorkflowRunsController.accessPermission(user, wfId, id),
+			relations: {
+				workflowDefinition: { owners: true },
+				ranBy: true,
+				log: true,
+			},
+			relationLoadStrategy: 'query',
+		});
 		return wfr.streamLog(this.k8sService).stream;
 	}
 

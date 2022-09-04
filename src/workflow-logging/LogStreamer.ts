@@ -1,7 +1,7 @@
 import { map, Observable, Observer, Subscriber } from 'rxjs';
 
 class LogMessage {
-	constructor(public readonly type: keyof Observer<string>, public message?: string) {}
+	constructor(public readonly type: keyof Observer<string>, public message: string = '') {}
 }
 
 export class LogStreamer {

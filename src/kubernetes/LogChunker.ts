@@ -1,12 +1,9 @@
 import * as k8s from '@kubernetes/client-node';
 import { KubernetesWorkflowRun } from 'src/workflow-runs/workflow-run.entity';
+import { K8sJobService } from './k8s-job.service';
 
 export class LogChunker {
-	constructor(
-		private readonly coreApi: k8s.CoreV1Api,
-		private readonly namespace: string,
-		private readonly run: KubernetesWorkflowRun,
-	) {}
+	constructor(private readonly service: K8sJobService, private readonly run: KubernetesWorkflowRun) {}
 
 	private hasSentAnything = false;
 	private lastFetch = 0;
@@ -41,39 +38,16 @@ export class LogChunker {
 
 		const sinceSeconds = p.latestMsSinceNow ? Math.floor((p.latestMsSinceNow + 1000) / 1000) : undefined;
 
-		return this.coreApi
-			.readNamespacedPodLog(
-				pod.metadata.name,
-				this.namespace,
-				undefined,
-				undefined,
-				undefined,
-				undefined,
-				undefined,
-				undefined,
-				sinceSeconds,
-			)
-			.then(x => x.body || '')
-			.catch(e => {
-				if (this.hasSentAnything) throw e;
-				else return '';
-			});
+		return this.service.getLogs(pod, sinceSeconds).catch(e => {
+			if (this.hasSentAnything) throw e;
+			else return '';
+		});
 	}
 
 	private podCache?: k8s.V1Pod;
 	private async getPod(): Promise<k8s.V1Pod> {
 		if (this.podCache) return this.podCache;
-
-		const pods = await this.coreApi.listNamespacedPod(
-			this.namespace,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			`job-name=${this.run.jobTag}`,
-		);
-
-		this.podCache = pods.body.items[0];
+		this.podCache = await this.service.getPodByName(this.run.jobTag);
 		return this.podCache;
 	}
 }

@@ -40,7 +40,7 @@ export class WorkflowDefinition<S = any> extends BaseEntity {
 
 	@Column({
 		generatedType: 'STORED',
-		asExpression: `regexp_replace("name", '[^a-zA-Z0-9-]', '-', 'g')`,
+		asExpression: `lower(regexp_replace("name", '[^a-zA-Z0-9-]', '-', 'g'))`,
 	})
 	readonly sanitizedName: string;
 

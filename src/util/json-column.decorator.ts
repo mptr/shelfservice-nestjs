@@ -28,6 +28,7 @@ export const JsonColumn = <T>(
 					const label = x[d.property];
 					return d.subTypes.filter(t => t.name === label)[0].value;
 				};
+				if (!v) return v;
 				if (options.array) return v.map((x: T) => mapper(x, getType(x)));
 				return mapper(v, getType(v));
 			},

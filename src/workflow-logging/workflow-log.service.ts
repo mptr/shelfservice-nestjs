@@ -27,6 +27,7 @@ export class WorkflowLogService {
 		const wfRun = await KubernetesWorkflowRun.findOne({
 			where: { id: j.metadata.annotations.jobId },
 			relations: { workflowDefinition: true },
+			withDeleted: true,
 		});
 		if (!wfRun) return console.warn("can't find workflow run for job:", j.metadata.name);
 

@@ -24,6 +24,9 @@ console.log = (...data) => {
 	});
 };
 
+// worker finished
+self.done = () => self.postMessage('__complete');
+
 // helper function that directly recievcies the variables of the workflow
 self.onvariables = _ => null;
 
