@@ -13,8 +13,8 @@ import {
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
 import { IsEmail, IsString } from 'class-validator';
-import { User } from 'src/users/user.entity';
 import { Repository } from 'typeorm';
+import { User } from 'src/users/user.entity';
 
 export class JWToken {
 	@IsString()

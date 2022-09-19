@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
-import { WorkflowsController } from './workflows.controller';
-import { WorkflowRunsModule } from '../workflow-runs/workflow-runs.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { WorkflowRunsModule } from '../workflow-runs/workflow-runs.module';
+import { User } from 'src/users/user.entity';
+import { ShelfAliasController } from './shelf-alias.controller';
 import {
 	KubernetesWorkflowDefinition,
 	WebWorkerWorkflowDefinition,
 	WorkflowDefinition,
 } from './workflow-definition.entity';
-import { ShelfAliasController } from './shelf-alias.controller';
-import { User } from 'src/users/user.entity';
+import { WorkflowsController } from './workflows.controller';
 
 @Module({
 	imports: [

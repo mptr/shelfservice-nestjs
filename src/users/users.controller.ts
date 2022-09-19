@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Delete, Put, HttpException, HttpStatus } from '@nestjs/common';
-import { User } from './user.entity';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JWToken, Requester, RequesterJwt } from 'src/util/requester.decorator';
+import { User } from './user.entity';
 
 @Controller('users')
 @ApiTags('users')

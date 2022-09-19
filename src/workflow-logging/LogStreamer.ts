@@ -11,6 +11,7 @@ export class LogStreamer {
 	constructor(source: Observable<string>, blacklist?: string[]);
 	constructor(log: string, blacklist?: string[]);
 	constructor(s: Observable<string> | string, blacklist: string[] = []) {
+		console.log('creat stream for', s);
 		if (typeof s === 'string') {
 			this.source = new Observable<string>(subscriber => {
 				subscriber.next(s);

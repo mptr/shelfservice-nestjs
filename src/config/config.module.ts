@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
+import { ConfigController } from './config.controller';
 import { K8sConfigService } from './k8s-config/k8s-config.service';
 import { KeycloakConfigService } from './keycloak-config/keycloak-config.service';
 import { TypeormConfigService } from './typeorm-config/typeorm-config.service';
-import { ConfigController } from './config.controller';
 
 const services = [KeycloakConfigService, TypeormConfigService, K8sConfigService];
 

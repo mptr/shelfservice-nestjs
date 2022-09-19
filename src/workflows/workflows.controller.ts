@@ -1,19 +1,19 @@
 import { Controller, Get, Post, Body, Param, Delete, Redirect, HttpException, HttpStatus, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { FindOptionsWhere, Like } from 'typeorm';
+import { User } from 'src/users/user.entity';
+import { Requester } from 'src/util/requester.decorator';
 import {
 	KubernetesWorkflowDefinition,
 	WebWorkerWorkflowDefinition,
 	WorkflowDefinition,
 } from './workflow-definition.entity';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { Requester } from 'src/util/requester.decorator';
-import { User } from 'src/users/user.entity';
-import { FindOptionsWhere, Like } from 'typeorm';
 
 @Controller('workflows')
 @ApiTags('workflows')
 @ApiBearerAuth('kc-token')
 export class WorkflowsController {
-	static accessPermission(user: User, defId?: string) {
+	private static accessPermission(user: User, defId?: string) {
 		return [{ id: defId, owners: { id: user.id } }];
 	}
 
@@ -32,6 +32,8 @@ export class WorkflowsController {
 	protected async create(user: User, wfDef: WorkflowDefinition) {
 		if (!wfDef.owners) wfDef.owners = [];
 		wfDef.owners.push(user);
+		// remove duplicate owners
+		wfDef.owners = wfDef.owners.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
 		wfDef = await wfDef.save();
 		return { url: wfDef.id };
 	}
@@ -55,7 +57,7 @@ export class WorkflowsController {
 				return parts;
 			});
 		return WorkflowDefinition.find({
-			select: ['id', 'kind', 'name', 'icon', 'hasParams', 'description'],
+			select: ['id', 'kind', 'name', 'icon', 'hasParams', 'description', 'createdAt'],
 			where: where.length === 0 ? undefined : where,
 			relations: { owners: true },
 		});
@@ -63,7 +65,7 @@ export class WorkflowsController {
 
 	@Get(':id')
 	findOne(@Param('id') id: string) {
-		return WorkflowDefinition.findOne({ where: { id }, relations: { owners: true } });
+		return WorkflowDefinition.findOneOrFail({ where: { id }, relations: { owners: true } });
 	}
 
 	@Delete(':id')

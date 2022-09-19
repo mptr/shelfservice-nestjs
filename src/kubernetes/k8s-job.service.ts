@@ -1,11 +1,11 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import * as k8s from '@kubernetes/client-node';
+import { V1Job } from '@kubernetes/client-node';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { interval, switchMap, takeUntil, Subject, Observable } from 'rxjs';
 import { K8sConfigService } from 'src/config/k8s-config/k8s-config.service';
-import { V1Job } from '@kubernetes/client-node';
+import { WorkflowLogService } from 'src/workflow-logging/workflow-log.service';
 import { KubernetesWorkflowRun } from 'src/workflow-runs/workflow-run.entity';
 import { LogChunker } from './LogChunker';
-import { WorkflowLogService } from 'src/workflow-logging/workflow-log.service';
 
 @Injectable()
 export class K8sJobService {

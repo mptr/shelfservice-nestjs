@@ -1,9 +1,5 @@
-import { User } from 'src/users/user.entity';
-import {
-	KubernetesWorkflowDefinition,
-	WebWorkerWorkflowDefinition,
-	WorkflowDefinition,
-} from 'src/workflows/workflow-definition.entity';
+import { Type } from 'class-transformer';
+import { IsBoolean, IsString, ValidateNested } from 'class-validator';
 import {
 	BaseEntity,
 	ChildEntity,
@@ -17,12 +13,15 @@ import {
 } from 'typeorm';
 import { K8sJobService } from '../kubernetes/k8s-job.service';
 import { SetParameter } from '../workflows/parameter.entity';
+import { User } from 'src/users/user.entity';
 import { JsonColumn } from 'src/util/json-column.decorator';
-import { Type } from 'class-transformer';
-import { ValidateNested } from 'class-validator';
 import { LogStreamer } from 'src/workflow-logging/LogStreamer';
+import {
+	KubernetesWorkflowDefinition,
+	WebWorkerWorkflowDefinition,
+	WorkflowDefinition,
+} from 'src/workflows/workflow-definition.entity';
 import { WorkflowRunLog } from './workflow-run-log.entity';
-import { readFileSync } from 'fs';
 
 @Entity()
 @TableInheritance({ column: { type: 'varchar', name: 'kind' } })
@@ -129,6 +128,12 @@ export class WebWorkerWorkflowRun extends WorkflowRun {
 	override async start() {
 		return super.start(undefined);
 	}
+}
 
-	static readonly webwokerExtensionScript = readFileSync(__dirname + '/webWorker-extensions.asset.js', 'utf-8');
+export class WebWorkerResultDto {
+	@IsString()
+	log: string;
+
+	@IsBoolean()
+	result: boolean;
 }

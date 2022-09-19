@@ -1,7 +1,7 @@
+import { Type } from 'class-transformer';
+import { IsArray, IsDataURI, IsOptional, IsString, ValidateNested } from 'class-validator';
 import {
 	BaseEntity,
-	BeforeInsert,
-	BeforeUpdate,
 	Check,
 	ChildEntity,
 	Column,
@@ -15,14 +15,11 @@ import {
 	TableInheritance,
 	UpdateDateColumn,
 } from 'typeorm';
-import { User } from 'src/users/user.entity';
-import { KubernetesWorkflowRun, WebWorkerWorkflowRun, WorkflowRun } from '../workflow-runs/workflow-run.entity';
 import { K8sJobService } from '../kubernetes/k8s-job.service';
-import { Parameter, SetParameter } from './parameter.entity';
-import { IsArray, IsDataURI, IsOptional, IsString, IsUrl, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
+import { User } from '../users/user.entity';
+import { KubernetesWorkflowRun, WebWorkerWorkflowRun, WorkflowRun } from '../workflow-runs/workflow-run.entity';
 import { JsonColumn } from 'src/util/json-column.decorator';
-import axios from 'axios';
+import { Parameter, SetParameter } from './parameter.entity';
 
 @Entity()
 @TableInheritance({ column: { type: 'varchar', name: 'kind' } })
@@ -34,7 +31,7 @@ export class WorkflowDefinition<S = any> extends BaseEntity {
 	@Column()
 	readonly kind: string;
 
-	@Column()
+	@Column({ unique: true })
 	@IsString()
 	name: string;
 
@@ -65,6 +62,8 @@ export class WorkflowDefinition<S = any> extends BaseEntity {
 	@Column({
 		generatedType: 'STORED',
 		asExpression: `jsonb_array_length("parameterFields") > 0`,
+		update: false,
+		insert: false,
 	})
 	readonly hasParams: boolean;
 
@@ -126,18 +125,9 @@ export class KubernetesWorkflowDefinition extends WorkflowDefinition<K8sJobServi
 
 @ChildEntity('webworker')
 export class WebWorkerWorkflowDefinition extends WorkflowDefinition<never> {
-	@BeforeInsert()
-	@BeforeUpdate()
-	async fetchArtifact() {
-		this.script = await axios.get(this.artifactUrl).then(r => r.data);
-	}
-
-	@Column()
+	@Column({ type: 'text' })
+	@IsString()
 	script: string;
-
-	@Column()
-	@IsUrl()
-	artifactUrl: string;
 
 	@OneToMany(() => WebWorkerWorkflowRun, wfrun => wfrun.workflowDefinition)
 	override runs: WebWorkerWorkflowRun[];

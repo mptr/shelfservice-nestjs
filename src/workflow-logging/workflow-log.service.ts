@@ -1,8 +1,8 @@
 import { V1Job } from '@kubernetes/client-node';
 import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { KubernetesWorkflowRun } from 'src/workflow-runs/workflow-run.entity';
 import { K8sJobService } from '../kubernetes/k8s-job.service';
+import { KubernetesWorkflowRun } from 'src/workflow-runs/workflow-run.entity';
 
 @Injectable()
 export class WorkflowLogService {

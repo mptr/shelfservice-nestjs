@@ -15,6 +15,6 @@ export class WorkflowRunLog extends BaseEntity {
 	@OneToOne(() => WorkflowRun, run => run.log, { nullable: false })
 	run: WorkflowRun;
 
-	@Column({ update: false })
+	@Column({ update: false, nullable: true })
 	data: string;
 }

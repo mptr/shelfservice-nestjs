@@ -1,7 +1,7 @@
-import { WorkflowDefinition } from 'src/workflows/workflow-definition.entity';
-import { WorkflowRun } from 'src/workflow-runs/workflow-run.entity';
 import { BaseEntity, Column, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { JWToken } from 'src/util/requester.decorator';
+import { WorkflowRun } from 'src/workflow-runs/workflow-run.entity';
+import { WorkflowDefinition } from 'src/workflows/workflow-definition.entity';
 
 @Entity()
 export class User extends BaseEntity {

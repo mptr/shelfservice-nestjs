@@ -80,7 +80,7 @@ export class Parameter {
 		return new SetParameter(from[this.name], this);
 	}
 }
-export class RequirableParameter extends Parameter {
+export class RequireableParameter extends Parameter {
 	@IsBoolean()
 	@IsOptional()
 	required = false;
@@ -108,7 +108,7 @@ export class RequirableParameter extends Parameter {
 		return r;
 	}
 }
-export class StringParameter extends RequirableParameter {
+export class StringParameter extends RequireableParameter {
 	@IsString()
 	@IsOptional()
 	exampleValue = '';
@@ -137,7 +137,7 @@ export class StringParameter extends RequirableParameter {
 		]);
 	}
 }
-export class SelectParameter extends RequirableParameter {
+export class SelectParameter extends RequireableParameter {
 	@IsString({ each: true })
 	options: string[] = [];
 
@@ -145,7 +145,7 @@ export class SelectParameter extends RequirableParameter {
 		super(p);
 	}
 }
-export class NumberParameter extends RequirableParameter {
+export class NumberParameter extends RequireableParameter {
 	@Allow()
 	@Transform(({ value }) => (value ? Number(value) : null))
 	min: number = null;
@@ -184,7 +184,7 @@ export class BooleanParameter extends Parameter {
 		super(p);
 	}
 }
-export class DateParameter extends RequirableParameter {
+export class DateParameter extends RequireableParameter {
 	constructor(p: Partial<DateParameter>) {
 		super(p);
 	}

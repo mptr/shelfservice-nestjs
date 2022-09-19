@@ -1,13 +1,13 @@
 import { Module, ValidationPipe } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { UsersModule } from './users/users.module';
-import { WorkflowsModule } from './workflows/workflows.module';
-import { KeycloakConfigService } from './config/keycloak-config/keycloak-config.service';
-import { ConfigModule } from './config/config.module';
-import { TypeormConfigService } from './config/typeorm-config/typeorm-config.service';
-import { AuthGuard, KeycloakConnectModule } from 'nest-keycloak-connect';
 import { APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthGuard, KeycloakConnectModule } from 'nest-keycloak-connect';
+import { ConfigModule } from './config/config.module';
+import { KeycloakConfigService } from './config/keycloak-config/keycloak-config.service';
+import { TypeormConfigService } from './config/typeorm-config/typeorm-config.service';
+import { UsersModule } from './users/users.module';
 import { WorkflowLoggingModule } from './workflow-logging/workflow-logging.module';
+import { WorkflowsModule } from './workflows/workflows.module';
 
 @Module({
 	imports: [
