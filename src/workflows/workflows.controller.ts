@@ -1,7 +1,22 @@
-import { Controller, Get, Post, Body, Param, Delete, Redirect, HttpException, HttpStatus, Query } from '@nestjs/common';
+import {
+	Controller,
+	Get,
+	Post,
+	Body,
+	Param,
+	Delete,
+	Redirect,
+	HttpException,
+	HttpStatus,
+	Query,
+	Patch,
+	Res,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
 import { FindOptionsWhere, Like } from 'typeorm';
 import { User } from 'src/users/user.entity';
+import { DiscriminatorPipe } from 'src/util/discriminator.pipe';
 import { Requester } from 'src/util/requester.decorator';
 import {
 	KubernetesWorkflowDefinition,
@@ -13,23 +28,22 @@ import {
 @ApiTags('workflows')
 @ApiBearerAuth('kc-token')
 export class WorkflowsController {
-	private static accessPermission(user: User, defId?: string) {
-		return [{ id: defId, owners: { id: user.id } }];
-	}
+	private static readonly discriminatorPipe = new DiscriminatorPipe({
+		discriminator: 'kind',
+		map: {
+			kubernetes: KubernetesWorkflowDefinition,
+			webworker: WebWorkerWorkflowDefinition,
+		},
+	});
 
-	@Post('kubernetes')
+	@Post()
 	@Redirect()
-	createKubernetes(@Requester() user: User, @Body() wfDef: KubernetesWorkflowDefinition) {
-		return this.create(user, wfDef);
-	}
-
-	@Post('webworker')
-	@Redirect()
-	createWebworker(@Requester() user: User, @Body() wfDef: WebWorkerWorkflowDefinition) {
-		return this.create(user, wfDef);
-	}
-
-	protected async create(user: User, wfDef: WorkflowDefinition) {
+	async create(
+		@Requester()
+		user: User,
+		@Body(WorkflowsController.discriminatorPipe)
+		wfDef: WorkflowDefinition,
+	) {
 		if (!wfDef.owners) wfDef.owners = [];
 		wfDef.owners.push(user);
 		// remove duplicate owners
@@ -63,16 +77,40 @@ export class WorkflowsController {
 		});
 	}
 
+	findOne(id: string, res: Response): Promise<WorkflowDefinition<unknown> | void>;
+	findOne(id: string): Promise<WorkflowDefinition<unknown>>;
 	@Get(':id')
-	findOne(@Param('id') id: string) {
-		return WorkflowDefinition.findOneOrFail({ where: { id }, relations: { owners: true } });
+	async findOne(@Param('id') id: string, @Res() res?: Response): Promise<WorkflowDefinition<unknown> | void> {
+		const wf = await WorkflowDefinition.findOneOrFail({
+			where: { id },
+			relations: { owners: true },
+			withDeleted: true,
+		});
+		if (res && wf.replacedById) return res.redirect(wf.replacedById);
+		if (wf.deletedAt) throw new HttpException('Workflow not found', HttpStatus.NOT_FOUND);
+		return wf;
+	}
+
+	@Patch(':id')
+	@Redirect()
+	async replace(
+		@Requester() user: User,
+		@Body(WorkflowsController.discriminatorPipe)
+		wfDef: WorkflowDefinition,
+		@Param('id') toReplaceId: string,
+	) {
+		const toReplace = await this.remove(user, toReplaceId); // remove the old one
+		const newWf = await this.create(user, wfDef); // create the new one
+		toReplace.replacedById = newWf.url; // set the replacement
+		toReplace.save(); // save the old one with replace-id
+		return newWf; // redirect to the new one
 	}
 
 	@Delete(':id')
 	async remove(@Requester() user: User, @Param('id') id: string) {
 		const r = await this.findOne(id);
 		if (!r.owners.map(o => o.id).includes(user.id))
-			throw new HttpException('You can only delete workflows owned by you', HttpStatus.FORBIDDEN);
+			throw new HttpException('You can only modify workflows owned by you', HttpStatus.FORBIDDEN);
 		return WorkflowDefinition.softRemove(r);
 	}
 }

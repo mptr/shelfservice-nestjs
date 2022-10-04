@@ -8,11 +8,13 @@ import {
 	CreateDateColumn,
 	DeleteDateColumn,
 	Entity,
+	Exclusion,
 	JoinTable,
 	ManyToMany,
 	OneToMany,
 	PrimaryGeneratedColumn,
 	TableInheritance,
+	Unique,
 	UpdateDateColumn,
 } from 'typeorm';
 import { K8sJobService } from '../kubernetes/k8s-job.service';
@@ -24,6 +26,7 @@ import { Parameter, SetParameter } from './parameter.entity';
 @Entity()
 @TableInheritance({ column: { type: 'varchar', name: 'kind' } })
 @Check('workflow_kind_req', `"kind" IS NOT NULL AND "kind" <> 'WorkflowDefinition'`)
+@Unique('workflow_name', ['name', 'deletedAt'])
 export class WorkflowDefinition<S = any> extends BaseEntity {
 	@PrimaryGeneratedColumn('uuid')
 	readonly id: string;
@@ -48,7 +51,10 @@ export class WorkflowDefinition<S = any> extends BaseEntity {
 	@Column({ nullable: true })
 	@IsOptional()
 	@IsDataURI()
-	icon: string;
+	icon?: string;
+
+	@Column({ nullable: true })
+	replacedById?: string;
 
 	@CreateDateColumn()
 	createdAt: Date;
