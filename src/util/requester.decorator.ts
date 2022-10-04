@@ -81,8 +81,7 @@ export const RequesterJwt = () => AuthedUser(JwtPipe);
 
 // copied from AuthenticatedUser-Decorator (nest-keycloak-connect)
 // this should pass entire request to next pipe if req.user does not exist
-/* istanbul ignore next */ // this is covered in e2e tests
-export const AuthedUser = createParamDecorator((data: unknown, ctx: ExecutionContext) => {
+export const AuthedUser = createParamDecorator((_data: unknown, ctx: ExecutionContext) => {
 	const req = ctx.switchToHttp().getRequest();
 	return req.user || req;
 });

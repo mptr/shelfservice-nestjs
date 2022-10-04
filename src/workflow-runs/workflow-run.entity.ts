@@ -22,6 +22,7 @@ import {
 	WorkflowDefinition,
 } from 'src/workflows/workflow-definition.entity';
 import { WorkflowRunLog } from './workflow-run-log.entity';
+import { HttpException, HttpStatus } from '@nestjs/common';
 
 @Entity()
 @TableInheritance({ column: { type: 'varchar', name: 'kind' } })
@@ -84,6 +85,7 @@ export class WorkflowRun extends BaseEntity {
 	}
 
 	async archive(result: boolean, logs: string) {
+		if (this.log) throw new HttpException('This workflow is already archived', HttpStatus.NOT_ACCEPTABLE);
 		this.result = result;
 		this.log = new WorkflowRunLog(this, logs);
 		this.finishedAt = new Date();

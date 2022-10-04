@@ -21,15 +21,11 @@ export class LogChunker {
 	private removeOverlap(l: string) {
 		const scan = this.sent.substring(this.sent.length - l.length);
 
-		let currentOverlap = 0;
-		for (let i = 0; i < l.length; i++) {
-			if (scan[i] === l[currentOverlap]) currentOverlap++;
-			else currentOverlap = 0;
-		}
+		let chopPos = l.length;
+		while (!scan.endsWith(l.substring(0, chopPos))) chopPos--;
 
-		const result = l.substring(currentOverlap);
+		const result = l.substring(chopPos);
 		this.sent += result;
-
 		return result;
 	}
 

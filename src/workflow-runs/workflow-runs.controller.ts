@@ -27,11 +27,11 @@ import { WebWorkerResultDto, WebWorkerWorkflowRun, WorkflowRun } from './workflo
 @ApiTags('workflow-runs')
 @ApiBearerAuth('kc-token')
 export class WorkflowRunsController {
-	private static accessPermission(user: User, defId: string, runId?: string) {
-		return [
-			{ id: runId, workflowDefinition: { id: defId, owners: { id: user.id } } },
-			{ id: runId, workflowDefinition: { id: defId }, ranBy: { id: user.id } },
-		];
+	private static ownerPermission(user: User, defId: string, runId?: string) {
+		return { id: runId, workflowDefinition: { id: defId, owners: { id: user.id } } };
+	}
+	private static ranByPermission(user: User, defId: string, runId: string) {
+		return { id: runId, workflowDefinition: { id: defId }, ranBy: { id: user.id } };
 	}
 
 	constructor(protected readonly k8sService: K8sJobService) {}
@@ -51,7 +51,7 @@ export class WorkflowRunsController {
 	@Get()
 	async findAll(@Requester() user: User, @Param('wfid') wfId: string) {
 		const r = await WorkflowRun.find({
-			where: WorkflowRunsController.accessPermission(user, wfId),
+			where: WorkflowRunsController.ownerPermission(user, wfId),
 			relations: { ranBy: true },
 		});
 		return r;
@@ -60,7 +60,10 @@ export class WorkflowRunsController {
 	@Get(':id')
 	async findOne(@Requester() user: User, @Param('wfid') wfId: string, @Param('id') id: string) {
 		const r = await WorkflowRun.findOneOrFail({
-			where: WorkflowRunsController.accessPermission(user, wfId, id),
+			where: [
+				WorkflowRunsController.ownerPermission(user, wfId, id),
+				WorkflowRunsController.ranByPermission(user, wfId, id),
+			],
 			relations: {
 				workflowDefinition: { owners: true },
 				ranBy: true,
@@ -78,10 +81,9 @@ export class WorkflowRunsController {
 		@Body() data: WebWorkerResultDto,
 	) {
 		const wfr = await WorkflowRun.findOneOrFail({
-			where: { id, workflowDefinition: { id: wfId }, ranBy: { id: user.id } }, // only select, if requester is the owner of the run
+			where: WorkflowRunsController.ranByPermission(user, wfId, id),
+			relations: { log: true },
 		});
-		if (wfr.ranBy.id !== user.id)
-			throw new HttpException('Only workflow starting user can report worker logs', HttpStatus.UNAUTHORIZED);
 		if (!(wfr instanceof WebWorkerWorkflowRun))
 			throw new HttpException(
 				'External collected logs can only be posted for WebWorker Workflows',
@@ -94,7 +96,10 @@ export class WorkflowRunsController {
 	@Sse(':id/log')
 	async streamLog(@Requester() user: User, @Param('wfid') wfId: string, @Param('id') id: string) {
 		const wfr = await WorkflowRun.findOneOrFail({
-			where: WorkflowRunsController.accessPermission(user, wfId, id),
+			where: [
+				WorkflowRunsController.ownerPermission(user, wfId, id),
+				WorkflowRunsController.ranByPermission(user, wfId, id),
+			],
 			relations: {
 				workflowDefinition: { owners: true },
 				ranBy: true,

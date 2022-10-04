@@ -10,7 +10,8 @@ module.exports = {
 	collectCoverageFrom: ['**/*.(t|j)s'],
 	coverageDirectory: '../coverage',
 	testEnvironment: 'node',
-	collectCoverage: true,
-	coverageReporters: ['lcov', 'html'],
+	// collectCoverage: true,
+	// coverageReporters: ['lcov', 'html'],
 	coveragePathIgnorePatterns: ['<rootDir>/build/', '<rootDir>/node_modules/'],
+	bail: true,
 };
