@@ -58,7 +58,7 @@ describe('K8sJobService', () => {
 	} as KubernetesWorkflowDefinition;
 	// @ts-ignore
 	run.id = v4();
-	run.parameters = [
+	run.setParameters = [
 		new SetParameter(
 			'x',
 			new Parameter({
@@ -87,7 +87,7 @@ describe('K8sJobService', () => {
 							{
 								image: run.workflowDefinition.image,
 								name: run.jobTag,
-								env: run.parameters,
+								env: run.setParameters,
 								command: run.workflowDefinition.command,
 							},
 						],

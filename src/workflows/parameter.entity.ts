@@ -73,11 +73,11 @@ export class Parameter {
 		];
 	}
 
-	accept(from: Record<string, string>): SetParameter {
+	accept(from: Record<string, string>): SetVariable {
 		this.acceptConditions.forEach(({ cond, err }) => {
 			if (cond(from)) throw new HttpException(err, HttpStatus.UNPROCESSABLE_ENTITY);
 		});
-		return new SetParameter(from[this.name], this);
+		return new SetVariable({ name: this.name, value: from[this.name] });
 	}
 }
 export class RequireableParameter extends Parameter {
@@ -102,7 +102,7 @@ export class RequireableParameter extends Parameter {
 		]);
 	}
 
-	override accept(from: Record<string, string>): SetParameter {
+	override accept(from: Record<string, string>): SetVariable {
 		const r = super.accept(from);
 		r.hide = this.hide;
 		return r;
@@ -190,12 +190,13 @@ export class DateParameter extends RequireableParameter {
 	}
 }
 
-export class SetParameter extends Parameter implements V1EnvVar {
-	hide = false;
-	value: string;
+export class SetVariable implements V1EnvVar {
+	public hide = false;
+	public name: string;
+	public value: string;
 
-	constructor(v: string, p: Parameter) {
-		super(p);
-		this.value = v;
+	constructor(p?: { name: string; value: string }) {
+		this.name = p?.name;
+		this.value = p?.value;
 	}
 }

@@ -1,22 +1,9 @@
-import {
-	Controller,
-	Get,
-	Post,
-	Body,
-	Param,
-	Delete,
-	Redirect,
-	HttpException,
-	HttpStatus,
-	Query,
-	Patch,
-	Res,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, HttpException, HttpStatus, Query, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { Response } from 'express';
 import { FindOptionsWhere, Like } from 'typeorm';
 import { User } from 'src/users/user.entity';
 import { DiscriminatorPipe } from 'src/util/discriminator.pipe';
+import { Redirection } from 'src/util/redirect.filter';
 import { Requester } from 'src/util/requester.decorator';
 import {
 	KubernetesWorkflowDefinition,
@@ -28,28 +15,43 @@ import {
 @ApiTags('workflows')
 @ApiBearerAuth('kc-token')
 export class WorkflowsController {
-	private static readonly discriminatorPipe = new DiscriminatorPipe({
-		discriminator: 'kind',
-		map: {
-			kubernetes: KubernetesWorkflowDefinition,
-			webworker: WebWorkerWorkflowDefinition,
-		},
-	});
+	private async getWfDef(id: string) {
+		return KubernetesWorkflowDefinition.findOneOrFail({
+			where: { id },
+			relations: { owners: true },
+			withDeleted: true,
+		});
+	}
 
-	@Post()
-	@Redirect()
-	async create(
-		@Requester()
-		user: User,
-		@Body(WorkflowsController.discriminatorPipe)
-		wfDef: WorkflowDefinition,
-	) {
+	private async saveWfDef(user: User, wfDef: WorkflowDefinition) {
 		if (!wfDef.owners) wfDef.owners = [];
 		wfDef.owners.push(user);
 		// remove duplicate owners
 		wfDef.owners = wfDef.owners.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
-		wfDef = await wfDef.save();
-		return { url: wfDef.id };
+		// @ts-ignore prevent updating by deleting id
+		delete wfDef.id;
+		return wfDef.save();
+	}
+
+	private static discriminatorMap = {
+		kubernetes: KubernetesWorkflowDefinition,
+		webworker: WebWorkerWorkflowDefinition,
+	};
+
+	private static readonly discriminatorPipe = new DiscriminatorPipe({
+		discriminator: 'kind',
+		map: WorkflowsController.discriminatorMap,
+	});
+
+	@Post()
+	async create(
+		@Requester()
+		user: User,
+		@Body(WorkflowsController.discriminatorPipe)
+		wfDef: KubernetesWorkflowDefinition | WebWorkerWorkflowDefinition,
+	) {
+		const created = await this.saveWfDef(user, wfDef);
+		throw new Redirection('workflows/' + created.id);
 	}
 
 	@Get()
@@ -77,33 +79,27 @@ export class WorkflowsController {
 		});
 	}
 
-	findOne(id: string, res: Response): Promise<WorkflowDefinition<unknown> | void>;
-	findOne(id: string): Promise<WorkflowDefinition<unknown>>;
 	@Get(':id')
-	async findOne(@Param('id') id: string, @Res() res?: Response): Promise<WorkflowDefinition<unknown> | void> {
-		const wf = await WorkflowDefinition.findOneOrFail({
-			where: { id },
-			relations: { owners: true },
-			withDeleted: true,
-		});
-		if (res && wf.replacedById) return res.redirect(wf.replacedById);
+	async findOne(@Param('id') id: string) {
+		const wf = await this.getWfDef(id);
+		if (wf.replacedById) throw new Redirection(wf.replacedById, HttpStatus.SEE_OTHER);
 		if (wf.deletedAt) throw new HttpException('Workflow not found', HttpStatus.NOT_FOUND);
+		console.log(wf?.image);
 		return wf;
 	}
 
 	@Patch(':id')
-	@Redirect()
 	async replace(
 		@Requester() user: User,
 		@Body(WorkflowsController.discriminatorPipe)
-		wfDef: WorkflowDefinition,
+		wfDef: KubernetesWorkflowDefinition | WebWorkerWorkflowDefinition,
 		@Param('id') toReplaceId: string,
 	) {
 		const toReplace = await this.remove(user, toReplaceId); // remove the old one
-		const newWf = await this.create(user, wfDef); // create the new one
-		toReplace.replacedById = newWf.url; // set the replacement
-		toReplace.save(); // save the old one with replace-id
-		return newWf; // redirect to the new one
+		const newWf = await this.saveWfDef(user, wfDef); // create the new one
+		toReplace.replacedById = newWf.id; // set the replacement
+		await toReplace.save(); // save the old one with replace-id
+		throw new Redirection(newWf.id, HttpStatus.SEE_OTHER); // redirect to new
 	}
 
 	@Delete(':id')

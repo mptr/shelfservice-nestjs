@@ -6,11 +6,10 @@ class LogMessage {
 
 export class LogStreamer {
 	private source: Observable<string>;
-	private blacklist: string[] = [];
 
-	constructor(source: Observable<string>, blacklist?: string[]);
-	constructor(log: string, blacklist?: string[]);
-	constructor(s: Observable<string> | string, blacklist: string[] = []) {
+	constructor(source: Observable<string>);
+	constructor(log: string);
+	constructor(s: Observable<string> | string) {
 		console.log('creat stream for', s);
 		if (typeof s === 'string') {
 			this.source = new Observable<string>(subscriber => {
@@ -18,8 +17,6 @@ export class LogStreamer {
 				subscriber.complete();
 			});
 		} else this.source = s;
-		// store all blacklist strings line by line
-		if (blacklist) this.blacklist = blacklist.flatMap(x => x.split('\n').map(x => x.trim()));
 	}
 
 	get stream() {
@@ -30,20 +27,6 @@ export class LogStreamer {
 				error: (e: any) => subscriber.next(new LogMessage('error', JSON.stringify(e))),
 			});
 			return () => sub.unsubscribe();
-		}).pipe(
-			map(x => {
-				x.message = x.message
-					// analyze each line of the message
-					.split('\n')
-					.map(line => {
-						// replace all blacklist matches
-						return this.blacklist.reduce((acc, cur) => acc.replace(cur, '*****'), line);
-					})
-					// rebuild the message
-					.join('\n');
-				return x;
-			}),
-			map(x => JSON.stringify(x)),
-		);
+		}).pipe(map(x => JSON.stringify(x)));
 	}
 }

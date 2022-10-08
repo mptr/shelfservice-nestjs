@@ -66,7 +66,7 @@ describe('WorkflowRunsController', () => {
 			delete mockK8sWfDef.owners;
 			expect(param.workflowDefinition).toMatchObject(mockK8sWfDef);
 			expect(param.ranBy).toEqual(mockRunUser);
-			expect(param.parameters).toEqual([]);
+			expect(param.setParameters).toEqual([]);
 			await expect(KubernetesWorkflowRun.findOneByOrFail({})).resolves.toMatchObject({ status: 'running' });
 		});
 

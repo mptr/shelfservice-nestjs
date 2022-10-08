@@ -52,7 +52,7 @@ export class K8sJobService {
 								{
 									image: run.workflowDefinition.image,
 									name: run.jobTag,
-									env: run.parameters,
+									env: run.variablesUnfiltered,
 									command: run.workflowDefinition.command,
 								},
 							],

@@ -1,16 +1,4 @@
-import {
-	Controller,
-	Get,
-	Post,
-	Body,
-	Param,
-	Redirect,
-	Sse,
-	Header,
-	HttpStatus,
-	HttpException,
-	Res,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Sse, Header, HttpStatus, HttpException, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { K8sJobService } from '../kubernetes/k8s-job.service';
@@ -20,6 +8,7 @@ import {
 	WorkflowDefinition,
 } from '../workflows/workflow-definition.entity';
 import { User } from 'src/users/user.entity';
+import { Redirection } from 'src/util/redirect.filter';
 import { Requester } from 'src/util/requester.decorator';
 import { WebWorkerResultDto, WebWorkerWorkflowRun, WorkflowRun } from './workflow-run.entity';
 
@@ -37,7 +26,6 @@ export class WorkflowRunsController {
 	constructor(protected readonly k8sService: K8sJobService) {}
 
 	@Post()
-	@Redirect()
 	@ApiBody({ type: Object })
 	async create(@Requester() user: User, @Param('wfid') wfId: string, @Body() parameters: Record<string, string> = {}) {
 		const wf = await WorkflowDefinition.findOneOrFail({ where: { id: wfId } });
@@ -45,7 +33,7 @@ export class WorkflowRunsController {
 		if (wf instanceof KubernetesWorkflowDefinition) wfr = await wf.run(user, parameters, this.k8sService);
 		else if (wf instanceof WebWorkerWorkflowDefinition) wfr = await wf.run(user, parameters);
 		else throw new Error('Unknown workflow type');
-		return { url: `runs/${wfr.id}` };
+		throw new Redirection(`runs/${wfr.id}`);
 	}
 
 	@Get()
@@ -97,7 +85,7 @@ export class WorkflowRunsController {
 	async streamLog(@Requester() user: User, @Param('wfid') wfId: string, @Param('id') id: string) {
 		const wfr = await WorkflowRun.findOneOrFail({
 			where: [
-				WorkflowRunsController.ownerPermission(user, wfId, id),
+				WorkflowRunsController.ownerPermission(user, wfId, id), // or
 				WorkflowRunsController.ranByPermission(user, wfId, id),
 			],
 			relations: {
@@ -116,8 +104,6 @@ export class WorkflowRunsController {
 		const wfr = await this.findOne(user, wfId, id);
 		if (wfr.ranBy.id !== user.id)
 			throw new HttpException('Only workflow starting user can access worker script', HttpStatus.UNAUTHORIZED);
-		if (wfr.status !== 'prepared')
-			throw new HttpException('This workflow has already started', HttpStatus.UNPROCESSABLE_ENTITY);
 		if (!(wfr instanceof WebWorkerWorkflowRun))
 			throw new HttpException('Only WebWorker Workflows can be fetched as script', HttpStatus.NOT_FOUND);
 		await wfr.start();

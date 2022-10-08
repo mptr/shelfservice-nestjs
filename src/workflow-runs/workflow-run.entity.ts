@@ -1,4 +1,5 @@
-import { Type } from 'class-transformer';
+import { HttpException, HttpStatus } from '@nestjs/common';
+import { Exclude, Expose, Type } from 'class-transformer';
 import { IsBoolean, IsString, ValidateNested } from 'class-validator';
 import {
 	BaseEntity,
@@ -12,7 +13,7 @@ import {
 	TableInheritance,
 } from 'typeorm';
 import { K8sJobService } from '../kubernetes/k8s-job.service';
-import { SetParameter } from '../workflows/parameter.entity';
+import { SetVariable } from '../workflows/parameter.entity';
 import { User } from 'src/users/user.entity';
 import { JsonColumn } from 'src/util/json-column.decorator';
 import { LogStreamer } from 'src/workflow-logging/LogStreamer';
@@ -22,16 +23,15 @@ import {
 	WorkflowDefinition,
 } from 'src/workflows/workflow-definition.entity';
 import { WorkflowRunLog } from './workflow-run-log.entity';
-import { HttpException, HttpStatus } from '@nestjs/common';
 
 @Entity()
 @TableInheritance({ column: { type: 'varchar', name: 'kind' } })
 export class WorkflowRun extends BaseEntity {
-	constructor(wfDef?: WorkflowDefinition, u?: User, parameters?: SetParameter[]) {
+	constructor(wfDef?: WorkflowDefinition, u?: User, parameters?: SetVariable[]) {
 		super();
 		if (wfDef) this.workflowDefinition = wfDef;
-		if (u) this.ranBy = u; // TODO: remove checks
-		if (parameters) this.parameters = parameters;
+		if (u) this.ranBy = u;
+		if (parameters) this.setParameters = parameters;
 	}
 
 	@PrimaryGeneratedColumn('uuid')
@@ -49,10 +49,26 @@ export class WorkflowRun extends BaseEntity {
 	@Column({ nullable: true })
 	finishedAt: Date;
 
-	@JsonColumn({ type: SetParameter, array: true, update: false })
-	@Type(() => SetParameter)
+	@JsonColumn({ type: SetVariable, array: true, update: false })
+	@Type(() => SetVariable)
 	@ValidateNested()
-	parameters: SetParameter[];
+	@Exclude({ toClassOnly: true })
+	protected setParameters: SetVariable[];
+
+	@Exclude() // this getter is used internally only
+	get variablesUnfiltered(): SetVariable[] {
+		return this.setParameters.concat(
+			new SetVariable({ name: 'IDENTITY_USERNAME', value: this.ranBy.preferred_username }),
+			new SetVariable({ name: 'IDENTITY_EMAIL', value: this.ranBy.email }),
+			new SetVariable({ name: 'IDENTITY_FIRSTNAME', value: this.ranBy.given_name }),
+			new SetVariable({ name: 'IDENTITY_LASTNAME', value: this.ranBy.family_name }),
+		);
+	}
+
+	@Expose() // this getter returns a filtered list of parameters for the client
+	get variables(): SetVariable[] {
+		return this.variablesUnfiltered.map((p: SetVariable) => new SetVariable({ ...p, value: p.hide ? '***' : p.value }));
+	}
 
 	@OneToOne(() => WorkflowRunLog, log => log.run)
 	@JoinColumn()
@@ -75,12 +91,14 @@ export class WorkflowRun extends BaseEntity {
 	readonly status: 'prepared' | 'running' | 'success' | 'failure';
 
 	start(_svc: unknown) {
+		if (this.status !== 'prepared' && this.status !== undefined)
+			throw new HttpException('This workflow has already started', HttpStatus.UNPROCESSABLE_ENTITY);
 		this.startedAt = new Date();
 		return this.save();
 	}
 
 	streamLog(_: unknown): LogStreamer {
-		if (this.log) return new LogStreamer(this.log.data, this.logBlacklist);
+		if (this.log) return new LogStreamer(this.log.data);
 		throw new Error('Cannot get logs from abstract WorkflowRun.');
 	}
 
@@ -96,15 +114,11 @@ export class WorkflowRun extends BaseEntity {
 	get jobTag() {
 		return `${this.workflowDefinition.sanitizedName}-${this.id}`;
 	}
-
-	protected get logBlacklist(): string[] {
-		return this.parameters.filter(p => p.hide).map(p => p.value);
-	}
 }
 
 @ChildEntity()
 export class KubernetesWorkflowRun extends WorkflowRun {
-	constructor(wfDef?: KubernetesWorkflowDefinition, u?: User, parameters?: SetParameter[]) {
+	constructor(wfDef?: KubernetesWorkflowDefinition, u?: User, parameters?: SetVariable[]) {
 		super(wfDef, u, parameters);
 	}
 
@@ -112,13 +126,14 @@ export class KubernetesWorkflowRun extends WorkflowRun {
 	override workflowDefinition: KubernetesWorkflowDefinition;
 
 	override async start(jobService: K8sJobService) {
+		const r = await super.start(jobService);
 		await jobService.apply(this);
-		return super.start(jobService);
+		return r;
 	}
 
 	override streamLog(svc: K8sJobService): LogStreamer {
 		if (this.log) return super.streamLog(svc);
-		return new LogStreamer(svc.getLogStream(this), this.logBlacklist);
+		return new LogStreamer(svc.getLogStream(this));
 	}
 }
 
@@ -126,6 +141,11 @@ export class KubernetesWorkflowRun extends WorkflowRun {
 export class WebWorkerWorkflowRun extends WorkflowRun {
 	@ManyToOne(() => WebWorkerWorkflowDefinition, wdef => wdef.runs)
 	override workflowDefinition: WebWorkerWorkflowDefinition;
+
+	@Expose() // for web workers params cant be filtered, client needs to know the values
+	override get variables(): SetVariable[] {
+		return this.variablesUnfiltered;
+	}
 
 	override async start() {
 		return super.start(undefined);
