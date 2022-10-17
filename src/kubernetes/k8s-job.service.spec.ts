@@ -1,11 +1,12 @@
 import * as k8s from '@kubernetes/client-node';
 import { Test, TestingModule } from '@nestjs/testing';
+import { v4 } from 'uuid';
 import { K8sConfigService } from 'src/config/k8s-config/k8s-config.service';
+import { User } from 'src/users/user.entity';
 import { WorkflowLogService } from 'src/workflow-logging/workflow-log.service';
 import { KubernetesWorkflowRun } from 'src/workflow-runs/workflow-run.entity';
-import { Parameter, SetParameter } from 'src/workflows/parameter.entity';
+import { SetVariable } from 'src/workflows/parameter.entity';
 import { KubernetesWorkflowDefinition } from 'src/workflows/workflow-definition.entity';
-import { v4 } from 'uuid';
 import { K8sJobService } from './k8s-job.service';
 
 describe('K8sJobService', () => {
@@ -56,16 +57,21 @@ describe('K8sJobService', () => {
 		image: 'imgname',
 		command: ['/bin/sh'],
 	} as KubernetesWorkflowDefinition;
-	// @ts-ignore
+	// @ts-ignore for testing
 	run.id = v4();
+	// @ts-ignore for testing
 	run.setParameters = [
-		new SetParameter(
-			'x',
-			new Parameter({
-				name: 'variable1',
-			}),
-		),
+		new SetVariable({
+			name: 'variable1',
+			value: 'x',
+		}),
 	];
+	run.ranBy = new User({
+		preferred_username: 'mmuster',
+		email: 'mmuster@sample.com',
+		family_name: 'Muster',
+		given_name: 'Max',
+	});
 
 	it('should start a job', async () => {
 		const r = { body: 'ok' };
@@ -87,7 +93,7 @@ describe('K8sJobService', () => {
 							{
 								image: run.workflowDefinition.image,
 								name: run.jobTag,
-								env: run.setParameters,
+								env: run.variablesUnfiltered,
 								command: run.workflowDefinition.command,
 							},
 						],

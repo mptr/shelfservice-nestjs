@@ -10,7 +10,6 @@ export class LogStreamer {
 	constructor(source: Observable<string>);
 	constructor(log: string);
 	constructor(s: Observable<string> | string) {
-		console.log('creat stream for', s);
 		if (typeof s === 'string') {
 			this.source = new Observable<string>(subscriber => {
 				subscriber.next(s);

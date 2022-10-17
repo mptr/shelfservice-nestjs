@@ -19,6 +19,8 @@ lerna-debug.log*
 
 # Tests
 /coverage
+/coverage-e2e
+/coverage-all
 /.nyc_output
 .eslintcache
 

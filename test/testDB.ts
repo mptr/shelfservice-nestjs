@@ -30,6 +30,12 @@ const testDataSourceFactory: TypeOrmDataSourceFactory = async (options: Postgres
 	new DataSource(await setupTestDb(options));
 
 export class TestDbModule {
+	static connections: DataSource[] = [];
+
+	public static closeAllConnections() {
+		return Promise.all(TestDbModule.connections.map(c => c.destroy()));
+	}
+
 	static forFeature(entities: EntityClassOrSchema[]): DynamicModule {
 		const entsModule = TypeOrmModule.forFeature(entities);
 		return {
@@ -37,7 +43,11 @@ export class TestDbModule {
 			imports: [
 				TypeOrmModule.forRootAsync({
 					useFactory: testDbWorkerConfig,
-					dataSourceFactory: testDataSourceFactory,
+					dataSourceFactory: async (...args) => {
+						const ds = await testDataSourceFactory(...args);
+						TestDbModule.connections.push(ds);
+						return ds;
+					},
 				}),
 				entsModule,
 			],
@@ -45,13 +55,3 @@ export class TestDbModule {
 		};
 	}
 }
-
-// @Injectable()
-// export class TestDbConfigService implements TypeOrmOptionsFactory {
-// 	async createTypeOrmOptions(): Promise<TypeOrmModuleOptions> {
-// 		return setupTestDb({
-// 			...testDbConfig,
-// 			database: 'test' + process.env.JEST_WORKER_ID,
-// 		});
-// 	}
-// }

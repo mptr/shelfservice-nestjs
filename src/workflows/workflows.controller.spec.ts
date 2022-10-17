@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TestDbModule } from 'test/testDB';
 import { v4 } from 'uuid';
 import { User } from 'src/users/user.entity';
+import { Redirection } from 'src/util/redirect.filter';
 import { KubernetesWorkflowDefinition, WebWorkerWorkflowDefinition } from './workflow-definition.entity';
 import { WorkflowsController } from './workflows.controller';
 
@@ -22,9 +23,9 @@ describe('WorkflowsController', () => {
 		}).compile();
 
 		controller = module.get<WorkflowsController>(WorkflowsController);
-
 		await mockUser.save();
 	});
+	afterAll(() => TestDbModule.closeAllConnections());
 
 	const mockK8sWfData = {
 		name: 'test',
@@ -43,13 +44,13 @@ describe('WorkflowsController', () => {
 	});
 
 	it('should not store an incomplete workflow ', async () => {
-		await expect(controller.createKubernetes(mockUser, new KubernetesWorkflowDefinition())).rejects.toBeDefined();
+		await expect(controller.create(mockUser, new KubernetesWorkflowDefinition())).rejects.toBeDefined();
 	});
 
 	it('should store a workflow', async () => {
 		const mockK8sWf = new KubernetesWorkflowDefinition();
 		Object.assign(mockK8sWf, mockK8sWfData);
-		await expect(controller.createKubernetes(mockUser, mockK8sWf)).resolves.toBeDefined();
+		await expect(controller.create(mockUser, mockK8sWf)).rejects.toBeInstanceOf(Redirection);
 	});
 
 	it('should store the workflow correctly', async () => {
@@ -65,13 +66,13 @@ describe('WorkflowsController', () => {
 	it('should not store a workflow with the same name', async () => {
 		const mock2 = new KubernetesWorkflowDefinition();
 		Object.assign(mock2, mockK8sWfData);
-		await expect(controller.createKubernetes(mockUser, mock2)).rejects.toBeDefined();
+		await expect(controller.create(mockUser, mock2)).rejects.toBeDefined();
 	});
 
 	it('should store a web worker workflow', async () => {
 		const mockWwWf = new WebWorkerWorkflowDefinition();
-		Object.assign(mockWwWf, { ...mockK8sWfData, name: 'test2' });
-		await expect(controller.createWebworker(mockUser, mockWwWf)).resolves.toBeDefined();
+		Object.assign(mockWwWf, { ...mockK8sWfData, name: 'test2', script: 'console.log(1);' });
+		await expect(controller.create(mockUser, mockWwWf)).rejects.toBeInstanceOf(Redirection);
 		await expect(controller.findAll()).resolves.toHaveLength(2);
 	});
 

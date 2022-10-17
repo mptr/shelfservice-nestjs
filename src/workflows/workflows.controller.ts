@@ -84,7 +84,6 @@ export class WorkflowsController {
 		const wf = await this.getWfDef(id);
 		if (wf.replacedById) throw new Redirection(wf.replacedById, HttpStatus.SEE_OTHER);
 		if (wf.deletedAt) throw new HttpException('Workflow not found', HttpStatus.NOT_FOUND);
-		console.log(wf?.image);
 		return wf;
 	}
 

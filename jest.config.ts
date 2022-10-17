@@ -1,5 +1,6 @@
-/** @type {import('ts-jest/dist/types').InitialOptionsTsJest} */
-module.exports = {
+import type { Config } from 'jest';
+
+const config: Config = {
 	moduleFileExtensions: ['js', 'json', 'ts'],
 	rootDir: '.',
 	modulePaths: ['<rootDir>'],
@@ -7,11 +8,11 @@ module.exports = {
 	transform: {
 		'^.+\\.(t|j)s$': 'ts-jest',
 	},
-	collectCoverageFrom: ['**/*.(t|j)s'],
-	coverageDirectory: '../coverage',
 	testEnvironment: 'node',
-	// collectCoverage: true,
-	// coverageReporters: ['lcov', 'html'],
+	collectCoverageFrom: ['src/**/*.(t|j)s'],
+	coverageDirectory: './coverage',
+	collectCoverage: true,
 	coveragePathIgnorePatterns: ['<rootDir>/build/', '<rootDir>/node_modules/'],
 	bail: true,
 };
+export default config;

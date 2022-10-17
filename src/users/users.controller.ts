@@ -8,7 +8,7 @@ import { User } from './user.entity';
 @ApiBearerAuth('kc-token')
 export class UsersController {
 	@Put(':username')
-	async create(@RequesterJwt() requester: JWToken, @Param('username') username: string) {
+	async save(@RequesterJwt() requester: JWToken, @Param('username') username: string) {
 		if (requester.preferred_username !== username)
 			throw new HttpException('You can only create your own user', HttpStatus.FORBIDDEN);
 		await User.upsert(new User(requester), {
@@ -35,6 +35,7 @@ export class UsersController {
 
 	@Delete(':id')
 	async remove(@Param('id') id: string) {
-		return User.delete({ id });
+		await User.delete({ id });
+		return true;
 	}
 }

@@ -1,8 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Response } from 'express';
+import { firstValueFrom, map, Observable, takeWhile, toArray } from 'rxjs';
 import { TestDbModule } from 'test/testDB';
 import { K8sJobService } from 'src/kubernetes/k8s-job.service';
 import { User } from 'src/users/user.entity';
+import { Redirection } from 'src/util/redirect.filter';
 import { KubernetesWorkflowDefinition, WebWorkerWorkflowDefinition } from 'src/workflows/workflow-definition.entity';
 import { KubernetesWorkflowRun, WebWorkerWorkflowRun } from './workflow-run.entity';
 import { WorkflowRunsController } from './workflow-runs.controller';
@@ -55,23 +57,25 @@ describe('WorkflowRunsController', () => {
 		await mockWwWfDef.save();
 	});
 
+	afterAll(() => TestDbModule.closeAllConnections());
+
 	it('should be defined', () => {
 		expect(controller).toBeDefined();
 	});
 
 	describe('start Workflows', () => {
 		it('should start a kubernetes workflow', async () => {
-			await expect(controller.create(mockRunUser, mockK8sWfDef.id, {})).resolves.toBeDefined();
+			await expect(controller.create(mockRunUser, mockK8sWfDef.id, {})).rejects.toBeInstanceOf(Redirection);
 			const param: KubernetesWorkflowRun = k8sServiceMock.apply.mock.calls[0][0];
 			delete mockK8sWfDef.owners;
 			expect(param.workflowDefinition).toMatchObject(mockK8sWfDef);
 			expect(param.ranBy).toEqual(mockRunUser);
-			expect(param.setParameters).toEqual([]);
+			expect(param.variables.every(v => v.name.startsWith('IDENTITY_'))).toBe(true);
 			await expect(KubernetesWorkflowRun.findOneByOrFail({})).resolves.toMatchObject({ status: 'running' });
 		});
 
 		it('should start a webworker workflow', async () => {
-			await expect(controller.create(mockCreateUser, mockWwWfDef.id, {})).resolves.toBeDefined();
+			await expect(controller.create(mockRunUser, mockWwWfDef.id, {})).rejects.toBeInstanceOf(Redirection);
 			const run = await WebWorkerWorkflowRun.findOneByOrFail({});
 			expect(run.status).toBe('prepared');
 		});
@@ -90,7 +94,7 @@ describe('WorkflowRunsController', () => {
 			const res = {
 				send: jest.fn(),
 			} as unknown as Response;
-			await expect(controller.getWorker(res, mockCreateUser, mockK8sWfDef.id, run.id)).rejects.toThrow();
+			await expect(controller.getWorker(res, mockRunUser, mockK8sWfDef.id, run.id)).rejects.toThrow();
 			expect(res.send).not.toHaveBeenCalled();
 		});
 
@@ -109,7 +113,7 @@ describe('WorkflowRunsController', () => {
 				send: jest.fn(),
 			};
 			await expect(
-				controller.getWorker(res as unknown as Response, mockCreateUser, mockWwWfDef.id, run.id),
+				controller.getWorker(res as unknown as Response, mockRunUser, mockWwWfDef.id, run.id),
 			).resolves.toBeFalsy();
 			expect(res.send).toHaveBeenCalled();
 			expect(res.send.mock.calls[0][0]).toBeInstanceOf(Buffer);
@@ -125,7 +129,31 @@ describe('WorkflowRunsController', () => {
 				result: true,
 			};
 			await expect(controller.reportLog(mockCreateUser, mockWwWfDef.id, run.id, dto)).rejects.toBeDefined();
+			await expect(controller.reportLog(mockRunUser, mockK8sWfDef.id, run.id, dto)).rejects.toBeDefined();
 			await expect(controller.reportLog(mockRunUser, mockWwWfDef.id, run.id, dto)).resolves.toEqual(dto);
+		});
+
+		it('should find all runs of a workflows', async () => {
+			await expect(controller.findAll(mockRunUser, mockWwWfDef.id)).resolves.toHaveLength(0);
+			await expect(controller.findAll(mockCreateUser, mockWwWfDef.id)).resolves.toHaveLength(1);
+		});
+	});
+
+	describe('log streaming', () => {
+		it('should stream the logs as Observable', async () => {
+			const run = await WebWorkerWorkflowRun.findOneByOrFail({});
+			const logs = await controller.streamLog(mockRunUser, mockWwWfDef.id, run.id);
+			expect(logs).toBeInstanceOf(Observable);
+			const evts = await firstValueFrom(
+				logs.pipe(
+					map(x => JSON.parse(x)),
+					takeWhile(x => x.type === 'next', true),
+					toArray(),
+				),
+			);
+			expect(evts).toHaveLength(2);
+			expect(evts[0]).toMatchObject({ message: 'test log', type: 'next' });
+			expect(evts[1]).toMatchObject({ message: '', type: 'complete' });
 		});
 	});
 });
