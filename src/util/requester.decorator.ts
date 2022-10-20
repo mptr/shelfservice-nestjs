@@ -64,8 +64,7 @@ export class JwtUserPipe implements PipeTransform<JWToken, Promise<User>> {
 export class JwtPipe implements PipeTransform<any, JWToken> {
 	transform(jwt?: any) {
 		try {
-			const jwtInstance = plainToInstance(JWToken, jwt);
-			return jwtInstance;
+			return plainToInstance(JWToken, jwt);
 		} catch (e) {
 			throw new HttpException(JSON.stringify(e), HttpStatus.UNAUTHORIZED);
 		}
@@ -73,15 +72,31 @@ export class JwtPipe implements PipeTransform<any, JWToken> {
 }
 
 /**
+ * Pipe to extract user object from request after user has been authenticated by guard
+ */
+@Injectable()
+export class AuthDataPipe implements PipeTransform<any, any> {
+	transform(req: any) {
+		try {
+			if (req.user) return req.user;
+			else throw new Error('no user');
+		} catch (e) {
+			throw new HttpException('No authorization header present', HttpStatus.UNAUTHORIZED);
+		}
+	}
+}
+
+/**
  * @returns a parameter decorator to use in handlers where the requesting user entity is needed
  */
-export const Requester = () => AuthedUser(JwtPipe, JwtUserPipe);
+export const Requester = () => Request(AuthDataPipe, JwtPipe, JwtUserPipe);
 
-export const RequesterJwt = () => AuthedUser(JwtPipe);
+/**
+ * @returns a parameter decorator to use in handlers where the requesting user identity is needed
+ */
+export const RequesterJwt = () => Request(AuthDataPipe, JwtPipe);
 
-// copied from AuthenticatedUser-Decorator (nest-keycloak-connect)
-// this should pass entire request to next pipe if req.user does not exist
-export const AuthedUser = createParamDecorator((_data: unknown, ctx: ExecutionContext) => {
-	const req = ctx.switchToHttp().getRequest();
-	return req.user || req;
+// replaces the `@Request()` decorator from nest such that pipes can be used
+const Request = createParamDecorator((_data: unknown, ctx: ExecutionContext) => {
+	return ctx.switchToHttp().getRequest();
 });

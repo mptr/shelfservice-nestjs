@@ -8,7 +8,6 @@ import { TypeormConfigService } from './config/typeorm-config/typeorm-config.ser
 import { UsersModule } from './users/users.module';
 import { RedirectFilter } from './util/redirect.filter';
 import { TypeormNotFoundExceptionFilter, TypeormQueryFailedExceptionFilter } from './util/typeorm-exception.filter';
-import { WorkflowLoggingModule } from './workflow-logging/workflow-logging.module';
 import { WorkflowsModule } from './workflows/workflows.module';
 
 @Module({
@@ -24,7 +23,6 @@ import { WorkflowsModule } from './workflows/workflows.module';
 		UsersModule,
 		WorkflowsModule,
 		ConfigModule,
-		WorkflowLoggingModule, // todo: move to separate app
 	],
 	providers: [
 		{ provide: APP_GUARD, useExisting: AuthGuard },

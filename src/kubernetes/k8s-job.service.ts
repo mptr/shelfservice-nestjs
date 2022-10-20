@@ -3,7 +3,7 @@ import { V1Job } from '@kubernetes/client-node';
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { interval, switchMap, takeUntil, Subject, Observable } from 'rxjs';
 import { K8sConfigService } from 'src/config/k8s-config/k8s-config.service';
-import { WorkflowLogService } from 'src/workflow-logging/workflow-log.service';
+import { WorkflowCollectService } from 'src/workflow-collect/workflow-collect.service';
 import { KubernetesWorkflowRun } from 'src/workflow-runs/workflow-run.entity';
 import { LogChunker } from './LogChunker';
 
@@ -13,8 +13,8 @@ export class K8sJobService {
 	protected readonly coreApi: k8s.CoreV1Api;
 	constructor(
 		protected readonly k8sConf: K8sConfigService,
-		@Inject(forwardRef(() => WorkflowLogService))
-		protected readonly logService: WorkflowLogService,
+		@Inject(forwardRef(() => WorkflowCollectService))
+		protected readonly logService: WorkflowCollectService,
 	) {
 		this.batchApi = k8sConf.makeApiClient(k8s.BatchV1Api);
 		this.coreApi = k8sConf.makeApiClient(k8s.CoreV1Api);

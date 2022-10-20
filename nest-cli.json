@@ -4,5 +4,15 @@
 	"sourceRoot": "src",
 	"compilerOptions": {
 		"assets": ["**/*.yaml", "**/*.yml"]
+	},
+	"projects": {
+		"api": {
+			"type": "application",
+			"entryFile": "main"
+		},
+		"schedule": {
+			"type": "microservice",
+			"entryFile": "schedule"
+		}
 	}
 }

@@ -12,7 +12,7 @@ import {
 	isString,
 	IsString,
 } from 'class-validator';
-import { IsRegEx } from 'src/util/IsRegex';
+import { IsRegEx } from 'src/util/is-regex.decorator';
 import { Discriminator } from 'src/util/json-column.decorator';
 
 export enum ParameterType {

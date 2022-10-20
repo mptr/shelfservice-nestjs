@@ -4,6 +4,9 @@ import { v4 } from 'uuid';
 import { JWToken } from 'src/util/requester.decorator';
 import { User } from './user.entity';
 import { UsersController } from './users.controller';
+import { WorkflowDefinition } from 'src/workflows/workflow-definition.entity';
+import { WorkflowRun } from 'src/workflow-runs/workflow-run.entity';
+import { WorkflowRunLog } from 'src/workflow-runs/workflow-run-log.entity';
 
 describe('UsersController', () => {
 	let controller: UsersController;
@@ -11,7 +14,7 @@ describe('UsersController', () => {
 	beforeAll(async () => {
 		const module: TestingModule = await Test.createTestingModule({
 			controllers: [UsersController],
-			imports: [TestDbModule.forFeature([User])],
+			imports: [TestDbModule.forFeature([User, WorkflowDefinition, WorkflowRun, WorkflowRunLog])],
 		}).compile();
 
 		controller = module.get<UsersController>(UsersController);

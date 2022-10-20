@@ -16,12 +16,12 @@ import { K8sJobService } from '../kubernetes/k8s-job.service';
 import { SetVariable } from '../workflows/parameter.entity';
 import { User } from 'src/users/user.entity';
 import { JsonColumn } from 'src/util/json-column.decorator';
-import { LogStreamer } from 'src/workflow-logging/LogStreamer';
 import {
 	KubernetesWorkflowDefinition,
 	WebWorkerWorkflowDefinition,
 	WorkflowDefinition,
 } from 'src/workflows/workflow-definition.entity';
+import { LogStreamer } from './LogStreamer';
 import { WorkflowRunLog } from './workflow-run-log.entity';
 
 @Entity()

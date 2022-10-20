@@ -1,4 +1,5 @@
-import { DataSource, DataSourceOptions, QueryRunner } from 'typeorm';
+import { PgOrmModuleOptions } from 'src/config/typeorm-config/typeorm-config.service';
+import { DataSource, QueryRunner } from 'typeorm';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 
 // set timeout to 10 minutes for all tests using the docker db connection
@@ -9,7 +10,7 @@ if (process.env && process.env.NODE_ENV === 'test' && process.env.JEST_WORKER_ID
  * @param options `ConnectionOptions` without database name
  * @returns `ConnectionOptions` with database name set to the newly created database
  */
-export const setupTestDb = async (options: PostgresConnectionOptions): Promise<DataSourceOptions> => {
+export const setupTestDb = async (options: PostgresConnectionOptions): Promise<PgOrmModuleOptions> => {
 	await performManageAction(options, options.database, async r => {
 		// alwasy drop the database first
 		await r.query(`DROP DATABASE IF EXISTS "${options.database}" WITH (FORCE);`);

@@ -3,8 +3,14 @@ import { TestDbModule } from 'test/testDB';
 import { v4 } from 'uuid';
 import { User } from 'src/users/user.entity';
 import { Redirection } from 'src/util/redirect.filter';
-import { KubernetesWorkflowDefinition, WebWorkerWorkflowDefinition } from './workflow-definition.entity';
+import {
+	KubernetesWorkflowDefinition,
+	WebWorkerWorkflowDefinition,
+	WorkflowDefinition,
+} from './workflow-definition.entity';
 import { WorkflowsController } from './workflows.controller';
+import { KubernetesWorkflowRun, WebWorkerWorkflowRun, WorkflowRun } from 'src/workflow-runs/workflow-run.entity';
+import { WorkflowRunLog } from 'src/workflow-runs/workflow-run-log.entity';
 
 describe('WorkflowsController', () => {
 	let controller: WorkflowsController;
@@ -19,7 +25,18 @@ describe('WorkflowsController', () => {
 	beforeAll(async () => {
 		const module: TestingModule = await Test.createTestingModule({
 			controllers: [WorkflowsController],
-			imports: [TestDbModule.forFeature([User])],
+			imports: [
+				TestDbModule.forFeature([
+					User,
+					WorkflowDefinition,
+					KubernetesWorkflowDefinition,
+					WebWorkerWorkflowDefinition,
+					WorkflowRun,
+					KubernetesWorkflowRun,
+					WebWorkerWorkflowRun,
+					WorkflowRunLog,
+				]),
+			],
 		}).compile();
 
 		controller = module.get<WorkflowsController>(WorkflowsController);

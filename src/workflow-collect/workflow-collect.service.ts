@@ -1,30 +1,21 @@
 import { V1Job } from '@kubernetes/client-node';
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { K8sJobService } from '../kubernetes/k8s-job.service';
 import { KubernetesWorkflowRun } from 'src/workflow-runs/workflow-run.entity';
 
 @Injectable()
-export class WorkflowLogService {
+export class WorkflowCollectService {
+	private readonly logger: Logger = new Logger(this.constructor.name);
+
 	constructor(
 		@Inject(forwardRef(() => K8sJobService))
 		protected readonly k8sService: K8sJobService,
 	) {}
-	// every 10 seconds
-	@Cron('*/10 * * * * *')
-	async collectLogs() {
-		const js = await this.k8sService.getAllJobs();
-		console.log('collecting logs', js.length);
-		js.forEach(j => {
-			if (j.status.active) this.processActive(j);
-			else this.processInactive(j);
-		});
-	}
 
 	async processInactive(j: V1Job) {
 		if (j.status.active) return;
 
-		console.log('cleaning up job:', j.metadata.name);
+		this.logger.log('cleaning up job:', j.metadata.name);
 
 		// get the workflow run
 		const wfRun = await KubernetesWorkflowRun.findOne({
@@ -32,7 +23,7 @@ export class WorkflowLogService {
 			relations: { workflowDefinition: true },
 			withDeleted: true,
 		});
-		if (!wfRun) return console.warn("can't find workflow run for job:", j.metadata.name);
+		if (!wfRun) return this.logger.warn("can't find workflow run for job:", j.metadata.name);
 
 		if (wfRun.result !== null) return; // do nothing if workflow run has already been marked as finished
 
@@ -46,7 +37,7 @@ export class WorkflowLogService {
 	async processActive(j: V1Job) {
 		const JOB_CANCEL_TIMEOUT = 10 * 60 * 1000;
 		if (j.status.startTime.getTime() + JOB_CANCEL_TIMEOUT >= new Date().getTime())
-			return console.log(j.metadata.name, 'is still running'); // do nothing if job is younger than JOB_CANCEL_TIMEOUT
-		console.warn('stale job detected:', j.metadata.name); // TODO: WARN USER
+			return this.logger.log(j.metadata.name, 'is still running'); // do nothing if job is younger than JOB_CANCEL_TIMEOUT
+		this.logger.warn('stale job detected:', j.metadata.name); // TODO: WARN USER
 	}
 }

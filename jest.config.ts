@@ -9,9 +9,9 @@ const config: Config = {
 		'^.+\\.(t|j)s$': 'ts-jest',
 	},
 	testEnvironment: 'node',
-	collectCoverageFrom: ['src/**/*.(t|j)s'],
+	collectCoverageFrom: ['src/**/*.(t|j)s', '!src/(main|schedule).ts'],
 	coverageDirectory: './coverage',
-	collectCoverage: true,
+	coverageReporters: ['json', 'lcov'],
 	coveragePathIgnorePatterns: ['<rootDir>/build/', '<rootDir>/node_modules/'],
 	bail: true,
 };

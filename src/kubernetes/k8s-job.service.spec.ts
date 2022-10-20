@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { v4 } from 'uuid';
 import { K8sConfigService } from 'src/config/k8s-config/k8s-config.service';
 import { User } from 'src/users/user.entity';
-import { WorkflowLogService } from 'src/workflow-logging/workflow-log.service';
+import { WorkflowCollectService } from 'src/workflow-collect/workflow-collect.service';
 import { KubernetesWorkflowRun } from 'src/workflow-runs/workflow-run.entity';
 import { SetVariable } from 'src/workflows/parameter.entity';
 import { KubernetesWorkflowDefinition } from 'src/workflows/workflow-definition.entity';
@@ -34,7 +34,7 @@ describe('K8sJobService', () => {
 			providers: [
 				K8sJobService,
 				{ provide: K8sConfigService, useValue: configServiceMock },
-				{ provide: WorkflowLogService, useValue: {} },
+				{ provide: WorkflowCollectService, useValue: {} },
 			],
 		}).compile();
 

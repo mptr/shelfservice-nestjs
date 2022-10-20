@@ -24,7 +24,6 @@ describe('TypeormConfigService', () => {
 			type: 'postgres',
 			host: config.DB_HOST,
 			port: +config.DB_PORT,
-			entities: [__dirname + '/**/*.entity{.ts,.js}'],
 			username: config.DB_USER,
 			password: config.DB_PASSWORD,
 			database: config.DB_NAME,
@@ -33,9 +32,8 @@ describe('TypeormConfigService', () => {
 		});
 	});
 
-	it('should build module config', () => {
-		expect(new TypeormConfigService().createTypeOrmOptions()).toMatchObject({
-			entities: undefined,
+	it('should build module config', async () => {
+		await expect(new TypeormConfigService().createTypeOrmOptions()).resolves.toMatchObject({
 			autoLoadEntities: true,
 		});
 	});

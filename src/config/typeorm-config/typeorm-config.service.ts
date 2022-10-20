@@ -3,13 +3,14 @@ import { TypeOrmModuleOptions, TypeOrmOptionsFactory } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 
+export type PgOrmModuleOptions = TypeOrmModuleOptions & PostgresConnectionOptions;
+
 @Injectable()
 export class TypeormConfigService implements TypeOrmOptionsFactory {
-	createTypeOrmOptions(): TypeOrmModuleOptions {
+	async createTypeOrmOptions(): Promise<PgOrmModuleOptions> {
 		return {
 			...TypeormConfigService.dataSourceOptions(),
-			// replace entities with the entities of the modules
-			entities: undefined,
+			// for in-app usage determine entities by module imports
 			autoLoadEntities: true,
 		};
 	}
@@ -21,7 +22,6 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
 			type: 'postgres',
 			host: DB_HOST,
 			port: Number(DB_PORT),
-			entities: [__dirname + '/**/*.entity{.ts,.js}'],
 			username: DB_USER,
 			password: DB_PASSWORD,
 			database: DB_NAME,
@@ -31,4 +31,7 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
 	}
 }
 
-export const AppDataSource = new DataSource(TypeormConfigService.dataSourceOptions());
+export const AppDataSource = new DataSource({
+	...TypeormConfigService.dataSourceOptions(),
+	entities: [__dirname + '/**/*.entity{.ts,.js}'], // expose these for cli usage
+});

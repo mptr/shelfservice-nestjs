@@ -5,9 +5,14 @@ import { TestDbModule } from 'test/testDB';
 import { K8sJobService } from 'src/kubernetes/k8s-job.service';
 import { User } from 'src/users/user.entity';
 import { Redirection } from 'src/util/redirect.filter';
-import { KubernetesWorkflowDefinition, WebWorkerWorkflowDefinition } from 'src/workflows/workflow-definition.entity';
-import { KubernetesWorkflowRun, WebWorkerWorkflowRun } from './workflow-run.entity';
+import {
+	KubernetesWorkflowDefinition,
+	WebWorkerWorkflowDefinition,
+	WorkflowDefinition,
+} from 'src/workflows/workflow-definition.entity';
+import { KubernetesWorkflowRun, WebWorkerWorkflowRun, WorkflowRun } from './workflow-run.entity';
 import { WorkflowRunsController } from './workflow-runs.controller';
+import { WorkflowRunLog } from './workflow-run-log.entity';
 
 describe('WorkflowRunsController', () => {
 	let controller: WorkflowRunsController;
@@ -47,7 +52,18 @@ describe('WorkflowRunsController', () => {
 		const module: TestingModule = await Test.createTestingModule({
 			controllers: [WorkflowRunsController],
 			providers: [{ provide: K8sJobService, useValue: k8sServiceMock }],
-			imports: [TestDbModule.forFeature([User])],
+			imports: [
+				TestDbModule.forFeature([
+					User,
+					WorkflowDefinition,
+					KubernetesWorkflowDefinition,
+					WebWorkerWorkflowDefinition,
+					WorkflowRun,
+					KubernetesWorkflowRun,
+					WebWorkerWorkflowRun,
+					WorkflowRunLog,
+				]),
+			],
 		}).compile();
 
 		controller = module.get<WorkflowRunsController>(WorkflowRunsController);
