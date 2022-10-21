@@ -26,7 +26,6 @@ export class WorkflowCollectService {
 		if (!wfRun) return this.logger.warn("can't find workflow run for job:", j.metadata.name);
 
 		if (wfRun.result !== null) return; // do nothing if workflow run has already been marked as finished
-
 		// store logs in the database
 		await wfRun.archive(!j.status.failed, await this.k8sService.getLogOnce(wfRun));
 
