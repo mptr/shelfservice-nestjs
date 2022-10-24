@@ -2,6 +2,9 @@
 /dist
 /node_modules
 
+# Secrets
+.env
+
 # Logs
 logs
 *.log
@@ -16,6 +19,8 @@ lerna-debug.log*
 
 # Tests
 /coverage
+/coverage-e2e
+/coverage-all
 /.nyc_output
 .eslintcache
 

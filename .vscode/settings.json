@@ -10,5 +10,18 @@
 		"**/dist": true,
 		"**/node_modules": true
 	},
-	"npm.packageManager": "pnpm"
+	"npm.packageManager": "pnpm",
+	"material-icon-theme.activeIconPack": "nest",
+	"sqltools.connections": [
+		{
+			"previewLimit": 50,
+			"server": "localhost",
+			"port": 5432,
+			"driver": "PostgreSQL",
+			"name": "shelfservice",
+			"database": "postgres",
+			"username": "postgres",
+			"password": "secret"
+		}
+	]
 }
