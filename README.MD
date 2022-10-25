@@ -18,6 +18,8 @@
    This will launch all required containers containing external services like the database and keycloak.
 4. setup a kubernetes cluster of choiche ([docker-desktop](https://www.docker.com/products/docker-desktop/) recommended) and place the kubeconfig containing the credentials in your home directory: `~/.kube/config`
 
+5. copy the `.env.template` to `.env` and adjust the settings to your needs.
+
 ## Run
 
 The application consists of two pieces:

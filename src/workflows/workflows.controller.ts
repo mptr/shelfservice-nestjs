@@ -16,7 +16,7 @@ import {
 @ApiBearerAuth('kc-token')
 export class WorkflowsController {
 	private async getWfDef(id: string) {
-		return KubernetesWorkflowDefinition.findOneOrFail({
+		return WorkflowDefinition.findOneOrFail({
 			where: { id },
 			relations: { owners: true },
 			withDeleted: true,
